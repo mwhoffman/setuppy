@@ -3,13 +3,17 @@
 class Logger:
   """Logger class."""
 
-  def __init__(self, verbosity: int, indent: int=0):
+  def __init__(self, verbosity: int, indent: int = 0):
     """Initialize the logger."""
     self._verbosity = verbosity
     self._indent = indent
 
-  def log(self, text: str, level: int=0):
+  def log(self, text: str, level: int = 0, skipped: bool = False):
     """Log output."""
+    if skipped:
+      text = text + " [skipped]"
+      level += 1
+
     if self._verbosity >= level:
       print(" " * (self._indent * 2) + text)
 

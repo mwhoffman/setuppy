@@ -1,26 +1,24 @@
 """Setup controller."""
 
-from typing import Callable
-
+from setuppy.actions import Actions
 from setuppy.facts import get_facts
 from setuppy.logger import Logger
+from setuppy.recipe import Action
 from setuppy.recipe import Recipe
 from setuppy.recipe import Tags
-
-
-ACTION_MAPPING: dict[str, Callable] = {}
-
-
-def register(action: Callable) -> Callable:
-  """Register an action."""
-  ACTION_MAPPING[action.__name__] = action
-  return action
 
 
 class Controller:
   """A controller for running setup tasks."""
 
-  def __init__(self, *, tags: Tags, simulate: bool, verbosity: int):
+  def __init__(
+    self,
+    *,
+    tags: Tags,
+    simulate: bool,
+    verbosity: int,
+    logger: Logger | None = None,
+  ):
     """Initialize the controller.
 
     Args:
@@ -29,14 +27,17 @@ class Controller:
       verbosity: how verbose to be.
     """
     self.simulate = simulate
-    self.logger = Logger(verbosity)
+    self.logger = logger or Logger(verbosity)
     self.tags = set(tags)
     self.facts = get_facts()
 
-    self.logger.log("Initializing setup...", 1)
-    self.logger.log("Gathering facts...", 1)
+    logger = self.logger
+    logger.log("Initializing setup...", 1)
+    logger.log("Gathering facts...", 1)
+
+    logger = logger.indent()
     for name, value in sorted(self.facts.items()):
-      self.logger.indent().log(f"{name}: {value}", 2)
+      logger.log(f"{name}: {value}", 2)
 
     match self.facts["uname"]:
       case "Linux":
@@ -44,40 +45,50 @@ class Controller:
       case "Darwin":
         self.tags.add("macos")
 
-    self.logger.indent().log(f"tags: {", ".join(self.tags)}", 2)
+    logger.log(f"tags: {", ".join(self.tags)}", 2)
 
-  def run(self, recipe: Recipe):
+  def should_skip(self, tags: Tags) -> bool:
+    return not tags.issubset(self.tags)
+
+  def run(
+    self,
+    recipe: Recipe,
+    logger: Logger | None = None,
+  ):
     """Run the given recipe."""
 
-    if not recipe.tags.issubset(self.tags):
-      self.logger.log(f'Skipping recipe "{recipe.name}"...', 3)
+    if logger is None:
+      logger = self.logger
+
+    skipped = self.should_skip(recipe.tags)
+    logger.log(f'Running recipe "{recipe.name}"...', 1, skipped=skipped)
+
+    if skipped:
       return
 
-    self.logger.log(f'Running recipe "{recipe.name}"...', 1)
-
     for action in recipe.actions:
-      if not action.tags.issubset(self.tags):
-        self.logger.indent().log("Skipping action...", 3)
-        continue
+      self.run_action(action, logger.indent())
 
-      kwarg_str = ", ".join(f"{k}={v}" for (k, v) in action.kwargs.items())
-      self.logger.indent().log(f"{action.kind}({kwarg_str})", 3)
+  def run_action(
+    self,
+    action: Action,
+    logger: Logger | None = None,
+  ):
+    """Run the given action."""
+    if logger is None:
+      logger = self.logger
 
-  def stow(self, package: str) -> bool:
-    """Run a stow action."""
-    stowdir = "dotfiles"
-    target = self.facts["home"]
-    cmd = f"stow -v --no-folding -d {stowdir} -t {target} -R {package}"
-    cmd += " -n" if self.simulate else ""
-    self.logger.indent().log(f"{cmd}", 2)
+    kwarg_str = ", ".join(f"{k}={v}" for (k, v) in action.kwargs.items())
+    skipped = self.should_skip(action.tags)
+    logger.log(f"{action.kind}({kwarg_str})", 3, skipped=skipped)
 
-    return False
+    if skipped:
+      return
 
-  def github(self, dest: str, account: str, repo: str) -> bool:
-    """Run a github action."""
-    target = f"{self.facts['home']}/{dest}/{repo}"
-    url = f"https://github.com/{account}/{repo}"
-    cmd = f"git clone {url} {target}"
-    self.logger.indent().log(f"{cmd}", 2)
-
-    return False
+    if action.kind in Actions:
+      Actions[action.kind](
+        self.facts,
+        logger.indent(),
+        self.simulate,
+        **action.kwargs,
+      )
