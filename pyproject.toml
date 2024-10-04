@@ -1,0 +1,19 @@
+[project]
+name = "setuppy"
+description = "A simple setup system."
+license = {file = "LICENSE"}
+readme = "README.md"
+authors = [{name = "Matthew W. Hoffman"}]
+dynamic = ["version"]
+
+requires-python = ">=3.12"
+dependencies = [
+  "click",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "setuppy.__version__"}
