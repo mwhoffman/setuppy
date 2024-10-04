@@ -1,0 +1,16 @@
+name = "example"
+tags = []
+
+[[action]]
+kind = "stow"
+package = "core"
+
+[[action]]
+kind = "apt"
+packages = ["fzf", "zsh"]
+tags = ["linux"]
+
+[[action]]
+kind = "brew"
+packages = ["fzf"]
+tags = ["macos"]
