@@ -91,7 +91,7 @@ class Stow(Command):
     facts: dict[str, Any],
     simulate: bool,
     verbosity: int,
-  ) -> tuple[bool, str]:
+  ) -> bool:
     """Run the command."""
     # Get the version of stow.
     rc, stdout, _ = run_command("stow --version", verbosity)
@@ -148,4 +148,4 @@ class Stow(Command):
         msg = msg + "; " if msg else ""
         msg = msg + f"{name}: " + ", ".join(files)
 
-    return changed, msg
+    return changed

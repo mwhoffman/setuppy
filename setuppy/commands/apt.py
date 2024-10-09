@@ -19,10 +19,10 @@ class Apt(Command):
     facts: dict[str, Any],
     simulate: bool,
     verbosity: int,
-  ) -> tuple[bool, str]:
+  ) -> bool:
     """Run a github action."""
     packages = [p.format(**facts) for p in self.packages]
     cmd = f"sudo apt-get install {' '.join(packages)}"
     if verbosity >= 4:
       click.echo(f"    {cmd}")
-    return False, ""
+    return False

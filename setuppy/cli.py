@@ -1,11 +1,12 @@
 """Command line interface for setup."""
 
-import click
-from dataclass_binder import Binder
 import sys
 
-from setuppy.controller import Controller
+import click
+from dataclass_binder import Binder
+
 from setuppy.commands.command import CommandError
+from setuppy.controller import Controller
 from setuppy.types import Recipe
 
 

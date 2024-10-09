@@ -91,7 +91,6 @@ class Controller:
     for action in recipe.actions:
       try:
         self.run_action(action)
-
       except CommandError as e:
         msg = f'Error while running "{action.name}" in recipe "{recipe.name}":'
         msg += f"\n  {e}"
@@ -99,37 +98,49 @@ class Controller:
 
   def run_action(self, action: Action):
     """Run the given action."""
-    msg = click.style(f"  {action.name}...")
-    skip = self.should_skip(action.tags)
+    # The message we'll log.
+    msg = f"  {action.name}..."
 
+    # Skip; output a message if verbosity is high enough (otherwise we're just
+    # silent).
+    if self.should_skip(action.tags):
+      if self.verbosity >= 3:
+        click.echo(msg + click.style(" [skipped]", fg="cyan"))
+      return
+
+    # Echo the message. No newline so we can mark it as changed later.
     if self.verbosity >= 2:
       click.echo(msg, nl=False)
 
-    if skip:
-      if self.verbosity >= 3:
-        click.secho(" [skipped]", fg="cyan")
-      return
-
+    # Add a newline if the verbosity is high enough because running the command
+    # will generate output.
     if self.verbosity >= 4:
       click.echo()
 
-    if action.kind in CommandRegistry:
-      command = CommandRegistry[action.kind](**action.kwargs)
-      try:
-        changed, msg = command(
-          facts=self.facts,
-          simulate=self.simulate,
-          verbosity=self.verbosity,
-        )
-      except Exception:
-        if self.verbosity >= 2 and self.verbosity < 4:
-          click.echo()
-        raise
+    if action.kind not in CommandRegistry:
+      raise CommandError('unknown action kind "{action.kind}"')
 
+    command = CommandRegistry[action.kind](**action.kwargs)
+
+    try:
+      changed = command(
+        facts=self.facts, simulate=self.simulate, verbosity=self.verbosity
+      )
+
+    except Exception:
+      # If we're waiting to see if anything changed add a newline because we'll
+      # exit early after reraising.
       if self.verbosity >= 2 and self.verbosity < 4:
-        if changed:
-          click.secho(" [changed]", fg="yellow")
-        else:
-          click.echo()
-      elif self.verbosity >= 4 and changed:
-        click.secho(f"    [changed] {msg}", fg="yellow")
+        click.echo()
+      raise
+
+    # Mark the command as causing a change, or add a newline if nothing changed.
+    if self.verbosity >= 2 and self.verbosity < 4:
+      if changed:
+        click.secho(" [changed]", fg="yellow")
+      else:
+        click.echo()
+
+    # If the verbosity is high enough message with what changed.
+    elif self.verbosity >= 4 and changed:
+      click.secho(f"    [changed]", fg="yellow")
