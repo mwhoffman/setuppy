@@ -1,10 +1,10 @@
 """Command line interface for setup."""
 
 import click
-import tomllib
+from dataclass_binder import Binder
 
 from setuppy.controller import Controller
-from setuppy.recipe import Recipe
+from setuppy.types import Recipe
 
 
 """Setup command line wrapper."""
@@ -31,7 +31,7 @@ from setuppy.recipe import Recipe
 def main(
   *,
   filenames: tuple[str],
-  tags: tuple[str],
+  tags: list[str],
   simulate: bool,
   verbosity: int,
 ):
@@ -39,18 +39,14 @@ def main(
 
   # Instantiate the controller.
   controller = Controller(
-    tags=set(tags),
+    tags=tags,
     simulate=simulate,
     verbosity=verbosity,
   )
 
-  recipes = []
-  for filename in filenames:
-    with open(filename, "rb") as f:
-      recipes.append(Recipe.from_dict(tomllib.load(f)))
-
-  for recipe in recipes:
-    controller.run(recipe)
+  # TODO: catch errors and exit cleanly.
+  recipes = [Binder(Recipe).parse_toml(filename) for filename in filenames]
+  controller.run(recipes)
 
 
 if __name__ == "__main__":

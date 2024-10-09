@@ -1,16 +1,25 @@
 name = "example"
 tags = []
 
-[[action]]
+[[actions]]
+name = "Stow core dotfiles"
 kind = "stow"
-package = "core"
+kwargs.package = "core"
 
-[[action]]
+[[actions]]
+name = "Install core packages (linux)"
 kind = "apt"
-packages = ["fzf", "zsh"]
 tags = ["linux"]
+kwargs.packages = ["fzf", "zsh"]
 
-[[action]]
+[[actions]]
+name = "Install core packages (macos)"
 kind = "brew"
-packages = ["fzf"]
 tags = ["macos"]
+kwargs.packages = ["fzf"]
+
+[[actions]]
+name = "Install ZSH syntax highlighting"
+kind = "github"
+kwargs.source = "zsh-users/zsh-syntax-highlighting"
+kwargs.dest = "{home}/.local/share/zsh"

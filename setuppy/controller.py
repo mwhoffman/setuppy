@@ -1,11 +1,23 @@
 """Setup controller."""
 
-from setuppy.actions import Actions
-from setuppy.facts import get_facts
-from setuppy.logger import Logger
-from setuppy.recipe import Action
-from setuppy.recipe import Recipe
-from setuppy.recipe import Tags
+import os
+from typing import Any
+
+import click
+
+from setuppy.commands import CommandRegistry
+from setuppy.types import Action
+from setuppy.types import Recipe
+
+
+def get_facts() -> dict[str, Any]:
+  """Get basic system facts."""
+  facts = dict()
+  facts["home"] = os.getenv("HOME")
+  facts["user"] = os.getenv("USER")
+  facts["cwd"] = os.getcwd()
+  facts["uname"] = os.uname().sysname
+  return facts
 
 
 class Controller:
@@ -14,10 +26,9 @@ class Controller:
   def __init__(
     self,
     *,
-    tags: Tags,
+    tags: list[str],
     simulate: bool,
     verbosity: int,
-    logger: Logger | None = None,
   ):
     """Initialize the controller.
 
@@ -27,17 +38,17 @@ class Controller:
       verbosity: how verbose to be.
     """
     self.simulate = simulate
-    self.logger = logger or Logger(verbosity)
+    self.verbosity = verbosity
     self.tags = set(tags)
     self.facts = get_facts()
 
-    logger = self.logger
-    logger.log("Initializing setup...", 1)
-    logger.log("Gathering facts...", 1)
+    if self.verbosity >= 1:
+      click.echo("Initializing setup...")
+      click.echo("Gathering facts...")
 
-    logger = logger.indent()
-    for name, value in sorted(self.facts.items()):
-      logger.log(f"{name}: {value}", 2)
+    if self.verbosity >= 4:
+      for name, value in sorted(self.facts.items()):
+        click.echo(f"  {name}: {value}")
 
     match self.facts["uname"]:
       case "Linux":
@@ -45,50 +56,59 @@ class Controller:
       case "Darwin":
         self.tags.add("macos")
 
-    logger.log(f"tags: {", ".join(self.tags)}", 2)
+    if self.verbosity >= 4:
+      click.echo(f"  tags: {", ".join(self.tags)}")
 
-  def should_skip(self, tags: Tags) -> bool:
-    return not tags.issubset(self.tags)
+  def should_skip(self, tags: list[str]) -> bool:
+    """Evaluate whether an action should be skipped.
 
-  def run(
-    self,
-    recipe: Recipe,
-    logger: Logger | None = None,
-  ):
+    Returns true if an action associated with the given tags should be
+    skipped.
+    """
+    return not set(tags).issubset(self.tags)
+
+  def run(self, recipes: list[Recipe] | Recipe):
+    """Run the given recipes."""
+    recipes = recipes if isinstance(recipes, list) else [recipes]
+    for recipe in recipes:
+      self.run_recipe(recipe)
+
+  def run_recipe(self, recipe: Recipe):
     """Run the given recipe."""
+    msg = click.style("Running recipe: ")
+    msg += click.style(recipe.name, underline=True)
+    skip = self.should_skip(recipe.tags)
 
-    if logger is None:
-      logger = self.logger
-
-    skipped = self.should_skip(recipe.tags)
-    logger.log(f'Running recipe "{recipe.name}"...', 1, skipped=skipped)
-
-    if skipped:
+    if skip:
+      if self.verbosity >= 3:
+        click.echo(msg, nl=False)
+        click.secho(" [skipped]", fg="yellow")
       return
+
+    if self.verbosity >= 1:
+      click.echo(msg)
 
     for action in recipe.actions:
-      self.run_action(action, logger.indent())
+      self.run_action(action)
 
-  def run_action(
-    self,
-    action: Action,
-    logger: Logger | None = None,
-  ):
+  def run_action(self, action: Action):
     """Run the given action."""
-    if logger is None:
-      logger = self.logger
+    msg = click.style(f"  {action.name}...")
+    skip = self.should_skip(action.tags)
 
-    kwarg_str = ", ".join(f"{k}={v}" for (k, v) in action.kwargs.items())
-    skipped = self.should_skip(action.tags)
-    logger.log(f"{action.kind}({kwarg_str})", 3, skipped=skipped)
-
-    if skipped:
+    if skip:
+      if self.verbosity >= 3:
+        click.echo(msg, nl=False)
+        click.secho(" [skipped]", fg="yellow")
       return
 
-    if action.kind in Actions:
-      Actions[action.kind](
-        self.facts,
-        logger.indent(),
-        self.simulate,
-        **action.kwargs,
+    if self.verbosity >= 2:
+      click.echo(msg)
+
+    if action.kind in CommandRegistry:
+      command = CommandRegistry[action.kind](**action.kwargs)
+      command(
+        facts=self.facts,
+        simulate=self.simulate,
+        verbosity=self.verbosity,
       )
