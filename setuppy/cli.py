@@ -1,5 +1,6 @@
 """Command line interface for setup."""
 
+import logging
 import sys
 
 import click
@@ -31,14 +32,26 @@ from setuppy.types import Recipe
   count=True,
   help="Verbose; multiple flags increases verbosity.",
 )
+@click.option(
+  "--log-to-stdout",
+  "log_to_stdout",
+  is_flag=True,
+  help="Log to stdout; ignores verbosity if set.",
+)
 def main(
   *,
   filenames: tuple[str],
   tags: list[str],
   simulate: bool,
   verbosity: int,
+  log_to_stdout: bool,
 ):
   """Run setup for the given TAGS."""
+
+  # Set our logging level.
+  if log_to_stdout:
+    verbosity = 0
+    logging.basicConfig(level=logging.DEBUG)
 
   # Instantiate the controller.
   controller = Controller(

@@ -1,5 +1,6 @@
 """Setup controller."""
 
+import logging
 import os
 from typing import Any
 
@@ -68,13 +69,16 @@ class Controller:
 
   def run_recipe(self, recipe: Recipe):
     """Run the given recipe."""
+    # Output message for the recipe.
     msg = f"Running recipe: {recipe.name}"
 
     if self.should_skip(recipe.tags):
+      logging.info('Skipping recipe "%s"', recipe.name)
       if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="yellow"))
       return
 
+    logging.info('Running recipe "%s"', recipe.name)
     if self.verbosity >= 1:
       click.echo(msg)
 
@@ -83,17 +87,19 @@ class Controller:
 
   def run_action(self, action: Action):
     """Run the given action."""
-    # The message we'll log.
+    # Output message for the action.
     msg = f"  {action.name}..."
 
     # Skip; output a message if verbosity is high enough (otherwise we're just
     # silent).
     if self.should_skip(action.tags):
+      logging.info('Skipping action "%s"', action.name)
       if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="cyan"))
       return
 
     # Echo the message. No newline so we can mark its status later.
+    logging.info('Running action "%s"', action.name)
     if self.verbosity >= 1:
       click.echo(msg, nl=False)
 
@@ -108,8 +114,9 @@ class Controller:
       changed = command(facts=self.facts, simulate=self.simulate)
 
     except Exception:
-      # Mark the status before reraising.
-      click.secho(" [error]", fg="red")
+      if self.verbosity >= 1:
+        # Mark the status before reraising.
+        click.secho(" [error]", fg="red")
       raise
 
     # Mark the status of the command.

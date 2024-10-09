@@ -1,8 +1,9 @@
 """Implementation of the stow command."""
 
+import dataclasses
+import logging
+import pathlib
 import re
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from setuppy.commands.command import Command
@@ -78,7 +79,7 @@ def get_changes_from_stderr(stderr: str) -> tuple[set[str], set[str]]:
   return unlinked-linked, linked-unlinked
 
 
-@dataclass
+@dataclasses.dataclass
 class Stow(Command):
   """Implementation of the stow command."""
   package: str
@@ -111,14 +112,14 @@ class Stow(Command):
 
     # Format the input options.
     package = self.package.format(**facts)
-    stowdir = self.stowdir.format(**facts)
-    target = self.target.format(**facts)
+    stowdir = pathlib.Path(self.stowdir.format(**facts))
+    target = pathlib.Path(self.target.format(**facts))
 
-    if not Path(stowdir).exists():
+    if not stowdir.exists():
       msg = f'stowdir "{stowdir}" does not exist'
       raise CommandError(msg)
 
-    if not (Path(stowdir) / package).exists():
+    if not (stowdir / package).exists():
       msg = f'package directory "{stowdir}/{package}" does not exist'
       raise CommandError(msg)
 
@@ -139,11 +140,12 @@ class Stow(Command):
     unlinked, linked = get_changes_from_stderr(stderr)
     changed = bool(linked | unlinked)
 
-    # Format the message.
-    msg = ""
-    for name, files in (("unlinked", unlinked), ("linked", linked)):
-      if files:
-        msg = msg + "; " if msg else ""
-        msg = msg + f"{name}: " + ", ".join(files)
+    if unlinked:
+      files = [str(target / f) for f in unlinked]
+      logging.info("Unlinked files: %s", ", ".join(files))
+
+    if linked:
+      files = [str(target / f) for f in linked]
+      logging.info("Linked files: %s", ", ".join(files))
 
     return changed

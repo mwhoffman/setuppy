@@ -1,8 +1,9 @@
 """Implementation of the github command."""
 
+import dataclasses
+import logging
 import os
-from dataclasses import dataclass
-from pathlib import Path
+import pathlib
 from typing import Any
 
 from setuppy.commands.command import Command
@@ -10,7 +11,7 @@ from setuppy.commands.command import CommandError
 from setuppy.commands.command import run_command
 
 
-@dataclass
+@dataclasses.dataclass
 class Github(Command):
   """Implementation of the stow command."""
   sources: list[str]
@@ -23,7 +24,7 @@ class Github(Command):
     simulate: bool,
   ) -> bool:
     """Run a github action."""
-    dest = Path(self.dest.format(**facts))
+    dest = pathlib.Path(self.dest.format(**facts))
     changed = False
 
     for s in self.sources:
@@ -56,14 +57,16 @@ class Github(Command):
           raise CommandError(msg)
 
         # The target must be a git directory pointed at the correct repository.
+        logging.info('Target "%s" exists', target)
         continue
 
       changed = True
+      cmd = f"git clone {url} {target}"
 
       if simulate:
+        logging.info('Skipping command "%s"', cmd)
         continue
 
-      cmd = f"git clone {url} {target}"
       rc, stderr, _ = run_command(cmd)
 
       if rc != 0:

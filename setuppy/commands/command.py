@@ -1,19 +1,19 @@
 """Base command class."""
 
+import abc
+import dataclasses
+import logging
 import shlex
 import shutil
 import subprocess
-from abc import ABCMeta
-from abc import abstractmethod
-from dataclasses import dataclass
 from typing import Any
 
 
-@dataclass
-class Command(metaclass=ABCMeta):
+@dataclasses.dataclass
+class Command(metaclass=abc.ABCMeta):
   """Command base class."""
 
-  @abstractmethod
+  @abc.abstractmethod
   def __call__(
     self,
     *,
@@ -44,6 +44,8 @@ def run_command(cmd: str) -> tuple[int, str, str]:
     raise CommandError(f"Could not find command: {path}")
 
   args[0] = path
+
+  logging.info('Running command "%s"', " ".join(args))
 
   p = subprocess.run(args, capture_output=True, encoding="utf-8", check=False)
   return p.returncode, p.stdout, p.stderr
