@@ -21,7 +21,6 @@ class Github(Command):
     *,
     facts: dict[str, Any],
     simulate: bool,
-    verbosity: int,
   ) -> bool:
     """Run a github action."""
     dest = Path(self.dest.format(**facts))
@@ -43,7 +42,7 @@ class Github(Command):
           raise CommandError(msg)
 
         cmd = f"git --git-dir={gitdir} remote get-url origin"
-        rc, stderr, _ = run_command(cmd, verbosity)
+        rc, stderr, _ = run_command(cmd)
 
         if rc != 0:
           msg = f'Error accessing git-dir "{gitdir}".'
@@ -65,7 +64,7 @@ class Github(Command):
       if simulate:
         continue
 
-      rc, stderr, _ = run_command(cmd, verbosity)
+      rc, stderr, _ = run_command(cmd)
       if rc != 0:
         msg = f'Error cloning target "{target}".'
         raise CommandError(msg)

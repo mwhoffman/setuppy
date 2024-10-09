@@ -90,11 +90,10 @@ class Stow(Command):
     *,
     facts: dict[str, Any],
     simulate: bool,
-    verbosity: int,
   ) -> bool:
     """Run the command."""
     # Get the version of stow.
-    rc, stdout, _ = run_command("stow --version", verbosity)
+    rc, stdout, _ = run_command("stow --version")
 
     if rc != 0:
       raise CommandError("Could not get stow version")
@@ -130,7 +129,7 @@ class Stow(Command):
 
     # Run the command. If rc is nonzero there should be conflicts which we can
     # identify and mark as a failure.
-    rc, _, stderr = run_command(cmd, verbosity)
+    rc, _, stderr = run_command(cmd)
     if rc != 0:
       conflicts = get_conflicts_from_stderr(stderr, version)
       conflicts = ", ".join(conflicts)

@@ -46,19 +46,11 @@ class Controller:
     if self.verbosity >= 1:
       click.echo("Initializing setup...")
 
-    if self.verbosity >= 4:
-      click.echo("Facts:")
-      for name, value in sorted(self.facts.items()):
-        click.echo(f"  {name}: {value}")
-
     match self.facts["uname"]:
       case "Linux":
         self.tags.add("linux")
       case "Darwin":
         self.tags.add("macos")
-
-    if self.verbosity >= 4:
-      click.echo(f"  tags: {", ".join(self.tags)}")
 
   def should_skip(self, tags: list[str]) -> bool:
     """Evaluate whether an action should be skipped.
@@ -77,24 +69,17 @@ class Controller:
   def run_recipe(self, recipe: Recipe):
     """Run the given recipe."""
     msg = f"Running recipe: {recipe.name}"
-    skip = self.should_skip(recipe.tags)
 
-    if skip:
-      if self.verbosity >= 3:
-        click.echo(msg, nl=False)
-        click.secho(" [skipped]", fg="yellow")
+    if self.should_skip(recipe.tags):
+      if self.verbosity >= 2:
+        click.echo(msg + click.style(" [skipped]", fg="yellow"))
       return
 
     if self.verbosity >= 1:
       click.echo(msg)
 
     for action in recipe.actions:
-      try:
-        self.run_action(action)
-      except CommandError as e:
-        msg = f'Error while running "{action.name}" in recipe "{recipe.name}":'
-        msg += f"\n  {e}"
-        raise CommandError(msg) from e
+      self.run_action(action)
 
   def run_action(self, action: Action):
     """Run the given action."""
@@ -104,43 +89,32 @@ class Controller:
     # Skip; output a message if verbosity is high enough (otherwise we're just
     # silent).
     if self.should_skip(action.tags):
-      if self.verbosity >= 3:
+      if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="cyan"))
       return
 
-    # Echo the message. No newline so we can mark it as changed later.
-    if self.verbosity >= 2:
+    # Echo the message. No newline so we can mark its status later.
+    if self.verbosity >= 1:
       click.echo(msg, nl=False)
 
-    # Add a newline if the verbosity is high enough because running the command
-    # will generate output.
-    if self.verbosity >= 4:
-      click.echo()
-
     if action.kind not in CommandRegistry:
+      if self.verbosity >= 1:
+        click.secho(" [error]", fg="red")
       raise CommandError('unknown action kind "{action.kind}"')
 
     command = CommandRegistry[action.kind](**action.kwargs)
 
     try:
-      changed = command(
-        facts=self.facts, simulate=self.simulate, verbosity=self.verbosity
-      )
+      changed = command(facts=self.facts, simulate=self.simulate)
 
     except Exception:
-      # If we're waiting to see if anything changed add a newline because we'll
-      # exit early after reraising.
-      if self.verbosity >= 2 and self.verbosity < 4:
-        click.echo()
+      # Mark the status before reraising.
+      click.secho(" [error]", fg="red")
       raise
 
-    # Mark the command as causing a change, or add a newline if nothing changed.
-    if self.verbosity >= 2 and self.verbosity < 4:
+    # Mark the status of the command.
+    if self.verbosity >= 1:
       if changed:
         click.secho(" [changed]", fg="yellow")
       else:
-        click.echo()
-
-    # If the verbosity is high enough message with what changed.
-    elif self.verbosity >= 4 and changed:
-      click.secho(f"    [changed]", fg="yellow")
+        click.secho(" [ok]", fg="green")

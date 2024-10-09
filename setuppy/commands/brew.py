@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 from typing import Any
 
-import click
-
 from setuppy.commands.command import Command
 
 
@@ -18,11 +16,8 @@ class Brew(Command):
     *,
     facts: dict[str, Any],
     simulate: bool,
-    verbosity: int,
   ) -> bool:
     """Run a github action."""
     packages = [p.format(**facts) for p in self.packages]
     cmd = f"brew install {' '.join(packages)}"
-    if verbosity >= 4:
-      click.echo(f"    {cmd}")
     return False
