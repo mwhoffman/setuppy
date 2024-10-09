@@ -21,7 +21,7 @@ class Github(Command):
     facts: dict[str, Any],
     simulate: bool,
     verbosity: int,
-  ):
+  ) -> tuple[bool, str]:
     """Run a github action."""
     dest = self.dest.format(**facts)
 
@@ -33,3 +33,5 @@ class Github(Command):
 
       if verbosity >= 4:
         click.echo(f"    {cmd}")
+
+      return False, ""

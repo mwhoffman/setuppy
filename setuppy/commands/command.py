@@ -1,5 +1,9 @@
 """Base command class."""
 
+import shlex
+import shutil
+import subprocess
+
 from abc import ABCMeta
 from abc import abstractmethod
 from dataclasses import dataclass
@@ -19,17 +23,25 @@ class Command(metaclass=ABCMeta):
     facts: dict[str, Any],
     simulate: bool,
     verbosity: int,
-  ):
+  ) -> tuple[bool, str]:
     """Run the command."""
 
 
-def has_command(cmd: str, verbosity: int) -> bool:
-  rc, _, _ = run_command(f"which {cmd}", verbosity)
-  return rc == 0
+class CommandError(RuntimeError):
+  pass
 
 
 def run_command(cmd: str, verbosity: int) -> tuple[int, str, str]:
+  args = shlex.split(cmd)
+  path = shutil.which(args[0])
+
+  if path is None:
+    raise CommandError(f"Could not find command: {path}")
+
+  args[0] = path
+
   if verbosity >= 4:
-    click.echo(f"    {cmd}")
-  # FIXME: Actually implement this.
-  return 0, "", ""
+    click.echo(f"    {' '.join(args)}")
+
+  p = subprocess.run(args, capture_output=True, encoding="utf-8")
+  return p.returncode, p.stdout, p.stderr

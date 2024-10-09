@@ -2,10 +2,11 @@
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from setuppy.commands.command import Command
-from setuppy.commands.command import has_command
+from setuppy.commands.command import CommandError
 from setuppy.commands.command import run_command
 
 
@@ -24,22 +25,6 @@ STOW_CONFLICT_RE = {
 
 # Copy the message for matching versions.
 STOW_CONFLICT_RE["2.4.1"] = STOW_CONFLICT_RE["2.4.0"]
-
-
-def get_stow_version(verbosity: int) -> str:
-  rc, stdout, _ = run_command("stow --version", verbosity)
-
-  if rc != 0:
-    raise RuntimeError("Could not get stow version")
-
-  match = re.match(
-    r"^stow \(GNU Stow\) version (?P<version>\d+\.\d+\.\d+)$",
-    stdout.strip())
-
-  if not match:
-    raise RuntimeError("Could not get stow version")
-
-  return match.group("version")
 
 
 def get_conflicts_from_stderr(stderr: str, version: str) -> set[str]:
@@ -106,19 +91,38 @@ class Stow(Command):
     facts: dict[str, Any],
     simulate: bool,
     verbosity: int,
-  ):
+  ) -> tuple[bool, str]:
     """Run the command."""
-    # Ensure we have stow.
-    if not has_command("stow", verbosity):
-      raise RuntimeError("Cannot find stow.")
-
     # Get the version of stow.
-    version = get_stow_version(verbosity)
+    rc, stdout, _ = run_command("stow --version", verbosity)
+
+    if rc != 0:
+      raise CommandError("Could not get stow version")
+
+    match = re.match(
+      r"^stow \(GNU Stow\) version (?P<version>\d+\.\d+\.\d+)$",
+      stdout.strip())
+
+    if not match:
+      raise CommandError("Could not parse stow version")
+
+    version = match.group("version")
+
+    if version not in STOW_CONFLICT_RE:
+      raise CommandError(f'Unsupported stow version "{version}"')
 
     # Format the input options.
     package = self.package.format(**facts)
     stowdir = self.stowdir.format(**facts)
     target = self.target.format(**facts)
+
+    if not Path(stowdir).exists():
+      msg = f'stowdir "{stowdir}" does not exist'
+      raise CommandError(msg)
+
+    if not (Path(stowdir) / package).exists():
+      msg = f'package directory "{stowdir}/{package}" does not exist'
+      raise CommandError(msg)
 
     # Format the command itself.
     cmd = f"stow -v --no-folding -d {stowdir} -t {target} -R {package}"
@@ -130,7 +134,7 @@ class Stow(Command):
     if rc != 0:
       conflicts = get_conflicts_from_stderr(stderr, version)
       conflicts = ", ".join(conflicts)
-      raise RuntimeError(f"Conflicting targets: {conflicts}")
+      raise CommandError(f"Conflicting targets: {conflicts}")
 
     # Otherwise we can find the links that were either removed or added. If any
     # were this counts as a change.

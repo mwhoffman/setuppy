@@ -6,6 +6,7 @@ from typing import Any
 import click
 
 from setuppy.commands import CommandRegistry
+from setuppy.commands.command import CommandError
 from setuppy.types import Action
 from setuppy.types import Recipe
 
@@ -44,9 +45,9 @@ class Controller:
 
     if self.verbosity >= 1:
       click.echo("Initializing setup...")
-      click.echo("Gathering facts...")
 
     if self.verbosity >= 4:
+      click.echo("Facts:")
       for name, value in sorted(self.facts.items()):
         click.echo(f"  {name}: {value}")
 
@@ -75,8 +76,7 @@ class Controller:
 
   def run_recipe(self, recipe: Recipe):
     """Run the given recipe."""
-    msg = click.style("Running recipe: ")
-    msg += click.style(recipe.name, underline=True)
+    msg = f"Running recipe: {recipe.name}"
     skip = self.should_skip(recipe.tags)
 
     if skip:
@@ -89,26 +89,47 @@ class Controller:
       click.echo(msg)
 
     for action in recipe.actions:
-      self.run_action(action)
+      try:
+        self.run_action(action)
+
+      except CommandError as e:
+        msg = f'Error while running "{action.name}" in recipe "{recipe.name}":'
+        msg += f"\n  {e}"
+        raise CommandError(msg) from e
 
   def run_action(self, action: Action):
     """Run the given action."""
     msg = click.style(f"  {action.name}...")
     skip = self.should_skip(action.tags)
 
+    if self.verbosity >= 2:
+      click.echo(msg, nl=False)
+
     if skip:
       if self.verbosity >= 3:
-        click.echo(msg, nl=False)
-        click.secho(" [skipped]", fg="yellow")
+        click.secho(" [skipped]", fg="cyan")
       return
 
-    if self.verbosity >= 2:
-      click.echo(msg)
+    if self.verbosity >= 4:
+      click.echo()
 
     if action.kind in CommandRegistry:
       command = CommandRegistry[action.kind](**action.kwargs)
-      command(
-        facts=self.facts,
-        simulate=self.simulate,
-        verbosity=self.verbosity,
-      )
+      try:
+        changed, msg = command(
+          facts=self.facts,
+          simulate=self.simulate,
+          verbosity=self.verbosity,
+        )
+      except Exception:
+        if self.verbosity >= 2 and self.verbosity < 4:
+          click.echo()
+        raise
+
+      if self.verbosity >= 2 and self.verbosity < 4:
+        if changed:
+          click.secho(" [changed]", fg="yellow")
+        else:
+          click.echo()
+      elif self.verbosity >= 4 and changed:
+        click.secho(f"    [changed] {msg}", fg="yellow")

@@ -2,8 +2,10 @@
 
 import click
 from dataclass_binder import Binder
+import sys
 
 from setuppy.controller import Controller
+from setuppy.commands.command import CommandError
 from setuppy.types import Recipe
 
 
@@ -44,9 +46,13 @@ def main(
     verbosity=verbosity,
   )
 
-  # TODO: catch errors and exit cleanly.
-  recipes = [Binder(Recipe).parse_toml(filename) for filename in filenames]
-  controller.run(recipes)
+  try:
+    recipes = [Binder(Recipe).parse_toml(filename) for filename in filenames]
+    controller.run(recipes)
+
+  except CommandError as e:
+    click.secho(str(e), fg="red")
+    sys.exit(-1)
 
 
 if __name__ == "__main__":
