@@ -12,7 +12,7 @@ from setuppy.commands.command import Command
 @dataclass
 class Github(Command):
   """Implementation of the stow command."""
-  source: str
+  sources: list[str]
   dest: str
 
   def __call__(
@@ -23,12 +23,13 @@ class Github(Command):
     verbosity: int,
   ):
     """Run a github action."""
-    source = self.source.format(**facts)
     dest = self.dest.format(**facts)
 
-    url = f"https://github.com/{source}"
-    target = f"{dest}/{os.path.basename(source)}"
-    cmd = f"git clone {url} {target}"
+    for source in self.sources:
+      source = source.format(**facts)
+      url = f"https://github.com/{source}"
+      target = f"{dest}/{os.path.basename(source)}"
+      cmd = f"git clone {url} {target}"
 
-    if verbosity >= 4:
-      click.echo(f"    {cmd}")
+      if verbosity >= 4:
+        click.echo(f"    {cmd}")

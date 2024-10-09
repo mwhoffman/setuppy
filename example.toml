@@ -19,7 +19,11 @@ tags = ["macos"]
 kwargs.packages = ["fzf"]
 
 [[actions]]
-name = "Install ZSH syntax highlighting"
+name = "Install ZSH plugins"
 kind = "github"
-kwargs.source = "zsh-users/zsh-syntax-highlighting"
+kwargs.sources = [
+  "zsh-users/zsh-syntax-highlighting",
+  "zsh-users/zsh-autosuggestions",
+  "jeffreytse/zsh-vi-mode",
+]
 kwargs.dest = "{home}/.local/share/zsh"
