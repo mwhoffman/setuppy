@@ -59,12 +59,13 @@ class Github(Command):
         continue
 
       changed = True
-      cmd = f"git clone {url} {target}"
 
       if simulate:
         continue
 
+      cmd = f"git clone {url} {target}"
       rc, stderr, _ = run_command(cmd)
+
       if rc != 0:
         msg = f'Error cloning target "{target}".'
         raise CommandError(msg)

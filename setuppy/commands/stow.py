@@ -94,7 +94,6 @@ class Stow(Command):
     """Run the command."""
     # Get the version of stow.
     rc, stdout, _ = run_command("stow --version")
-
     if rc != 0:
       raise CommandError("Could not get stow version")
 
