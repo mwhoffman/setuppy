@@ -6,3 +6,5 @@
 #
 click==8.1.7
     # via setuppy (pyproject.toml)
+dataclass-binder==0.3.4
+    # via setuppy (pyproject.toml)
