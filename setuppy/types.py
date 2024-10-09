@@ -22,3 +22,7 @@ class Recipe:
   name: str
   actions: list[Action]
   tags: list[str] = field(default_factory=list)
+
+
+class SetuppyError(RuntimeError):
+  """Error raised within setuppy."""

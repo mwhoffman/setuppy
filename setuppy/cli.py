@@ -6,9 +6,9 @@ import sys
 import click
 from dataclass_binder import Binder
 
-from setuppy.commands.command import CommandError
 from setuppy.controller import Controller
 from setuppy.types import Recipe
+from setuppy.types import SetuppyError
 
 
 """Setup command line wrapper."""
@@ -64,7 +64,7 @@ def main(
     recipes = [Binder(Recipe).parse_toml(filename) for filename in filenames]
     controller.run(recipes)
 
-  except CommandError as e:
+  except SetuppyError as e:
     click.secho(str(e), fg="red")
     sys.exit(-1)
 

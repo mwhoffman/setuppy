@@ -3,11 +3,11 @@
 from dataclasses import dataclass
 from typing import Any
 
-from setuppy.commands.command import Command
+from setuppy.commands.base import BaseCommand
 
 
 @dataclass
-class Apt(Command):
+class Apt(BaseCommand):
   """Implementation of the brew command."""
   packages: list[str]
 

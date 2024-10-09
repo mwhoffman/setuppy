@@ -8,10 +8,12 @@ import shutil
 import subprocess
 from typing import Any
 
+from setuppy.types import SetuppyError
+
 
 @dataclasses.dataclass
-class Command(metaclass=abc.ABCMeta):
-  """Command base class."""
+class BaseCommand(metaclass=abc.ABCMeta):
+  """Base class for defining commands."""
 
   @abc.abstractmethod
   def __call__(
@@ -21,10 +23,6 @@ class Command(metaclass=abc.ABCMeta):
     simulate: bool,
   ) -> bool:
     """Run the command."""
-
-
-class CommandError(RuntimeError):
-  """Error raised within setuppy."""
 
 
 def run_command(cmd: str) -> tuple[int, str, str]:
@@ -41,7 +39,7 @@ def run_command(cmd: str) -> tuple[int, str, str]:
   path = shutil.which(args[0])
 
   if path is None:
-    raise CommandError(f"Could not find command: {path}")
+    raise SetuppyError(f"Could not find command: {path}")
 
   args[0] = path
 

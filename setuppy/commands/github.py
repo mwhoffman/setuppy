@@ -6,13 +6,13 @@ import os
 import pathlib
 from typing import Any
 
-from setuppy.commands.command import Command
-from setuppy.commands.command import CommandError
-from setuppy.commands.command import run_command
+from setuppy.commands.base import BaseCommand
+from setuppy.commands.base import run_command
+from setuppy.types import SetuppyError
 
 
 @dataclasses.dataclass
-class Github(Command):
+class Github(BaseCommand):
   """Implementation of the stow command."""
   sources: list[str]
   dest: str
@@ -35,26 +35,26 @@ class Github(Command):
       if target.exists():
         if not target.is_dir():
           msg = f'Target "{target}" exists and is not a directory.'
-          raise CommandError(msg)
+          raise SetuppyError(msg)
 
         gitdir = target / ".git"
         if gitdir.exists() and not gitdir.is_dir():
           msg = f'Target "{target}" exists and is not a git directory.'
-          raise CommandError(msg)
+          raise SetuppyError(msg)
 
         cmd = f"git --git-dir={gitdir} remote get-url origin"
         rc, stderr, _ = run_command(cmd)
 
         if rc != 0:
           msg = f'Error accessing git-dir "{gitdir}".'
-          raise CommandError(msg)
+          raise SetuppyError(msg)
 
         if stderr.strip() != url:
           msg = (
             f'Target "{target}" exists, but tracks a different upstream '
             'repository.'
           )
-          raise CommandError(msg)
+          raise SetuppyError(msg)
 
         # The target must be a git directory pointed at the correct repository.
         logging.info('Target "%s" exists', target)
@@ -71,6 +71,6 @@ class Github(Command):
 
       if rc != 0:
         msg = f'Error cloning target "{target}".'
-        raise CommandError(msg)
+        raise SetuppyError(msg)
 
     return changed

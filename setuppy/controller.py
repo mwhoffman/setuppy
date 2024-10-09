@@ -7,9 +7,9 @@ from typing import Any
 import click
 
 from setuppy.commands import CommandRegistry
-from setuppy.commands.command import CommandError
 from setuppy.types import Action
 from setuppy.types import Recipe
+from setuppy.types import SetuppyError
 
 
 def get_facts() -> dict[str, Any]:
@@ -106,7 +106,7 @@ class Controller:
     if action.kind not in CommandRegistry:
       if self.verbosity >= 1:
         click.secho(" [error]", fg="red")
-      raise CommandError('unknown action kind "{action.kind}"')
+      raise SetuppyError('unknown action kind "{action.kind}"')
 
     command = CommandRegistry[action.kind](**action.kwargs)
 

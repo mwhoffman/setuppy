@@ -6,9 +6,9 @@ import pathlib
 import re
 from typing import Any
 
-from setuppy.commands.command import Command
-from setuppy.commands.command import CommandError
-from setuppy.commands.command import run_command
+from setuppy.commands.base import BaseCommand
+from setuppy.commands.base import run_command
+from setuppy.types import SetuppyError
 
 
 # Define how to find conflicts based on stow's error message. This is version
@@ -80,7 +80,7 @@ def get_changes_from_stderr(stderr: str) -> tuple[set[str], set[str]]:
 
 
 @dataclasses.dataclass
-class Stow(Command):
+class Stow(BaseCommand):
   """Implementation of the stow command."""
   package: str
   stowdir: str = "dotfiles"
@@ -96,19 +96,19 @@ class Stow(Command):
     # Get the version of stow.
     rc, stdout, _ = run_command("stow --version")
     if rc != 0:
-      raise CommandError("Could not get stow version")
+      raise SetuppyError("Could not get stow version")
 
     match = re.match(
       r"^stow \(GNU Stow\) version (?P<version>\d+\.\d+\.\d+)$",
       stdout.strip())
 
     if not match:
-      raise CommandError("Could not parse stow version")
+      raise SetuppyError("Could not parse stow version")
 
     version = match.group("version")
 
     if version not in STOW_CONFLICT_RE:
-      raise CommandError(f'Unsupported stow version "{version}"')
+      raise SetuppyError(f'Unsupported stow version "{version}"')
 
     # Format the input options.
     package = self.package.format(**facts)
@@ -117,11 +117,11 @@ class Stow(Command):
 
     if not stowdir.exists():
       msg = f'stowdir "{stowdir}" does not exist'
-      raise CommandError(msg)
+      raise SetuppyError(msg)
 
     if not (stowdir / package).exists():
       msg = f'package directory "{stowdir}/{package}" does not exist'
-      raise CommandError(msg)
+      raise SetuppyError(msg)
 
     # Format the command itself.
     cmd = f"stow -v --no-folding -d {stowdir} -t {target} -R {package}"
@@ -133,7 +133,7 @@ class Stow(Command):
     if rc != 0:
       conflicts = get_conflicts_from_stderr(stderr, version)
       conflicts = ", ".join(conflicts)
-      raise CommandError(f"Conflicting targets: {conflicts}")
+      raise SetuppyError(f"Conflicting targets: {conflicts}")
 
     # Otherwise we can find the links that were either removed or added. If any
     # were this counts as a change.

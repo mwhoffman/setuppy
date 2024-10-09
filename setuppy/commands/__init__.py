@@ -6,13 +6,13 @@ from setuppy.commands import apt
 from setuppy.commands import brew
 from setuppy.commands import github
 from setuppy.commands import stow
-from setuppy.commands.command import Command
+from setuppy.commands.base import BaseCommand
 
 
-CommandRegistry: dict[str, Type[Command]] = dict()
+CommandRegistry: dict[str, Type[BaseCommand]] = dict()
 
 
-def register(cls: Type[Command]) -> Type[Command]:
+def register(cls: Type[BaseCommand]) -> Type[BaseCommand]:
   """Register the command type."""
   CommandRegistry[cls.__name__.lower()] = cls
   return cls
