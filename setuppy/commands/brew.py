@@ -17,7 +17,6 @@ class Brew(BaseCommand):
     facts: dict[str, Any],
     simulate: bool,
   ) -> bool:
-    """Run a github action."""
-    packages = [p.format(**facts) for p in self.packages]
-    cmd = f"brew install {' '.join(packages)}"
+    """Run a brew action."""
+    # TODO: Fill in this stub command.
     return False
