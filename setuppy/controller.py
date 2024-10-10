@@ -129,7 +129,7 @@ class Controller:
     if action.kind not in CommandRegistry:
       if self.verbosity >= 1:
         click.secho(" [error]", fg="red")
-      raise SetuppyError('unknown action kind "{action.kind}"')
+      raise SetuppyError(f'unknown action kind "{action.kind}"')
 
     # TODO: verify the types of action.kwargs.
     command = CommandRegistry[action.kind](**action.kwargs)
