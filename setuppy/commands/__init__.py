@@ -4,6 +4,7 @@ from typing import Type
 
 from setuppy.commands import apt
 from setuppy.commands import brew
+from setuppy.commands import curl
 from setuppy.commands import github
 from setuppy.commands import stow
 from setuppy.commands.base import BaseCommand
@@ -20,5 +21,6 @@ def register(cls: Type[BaseCommand]) -> Type[BaseCommand]:
 
 register(apt.Apt)
 register(brew.Brew)
+register(curl.Curl)
 register(github.Github)
 register(stow.Stow)
