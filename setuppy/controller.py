@@ -3,6 +3,7 @@
 import logging
 import os
 from typing import Any
+from typing import cast
 
 import click
 
@@ -12,14 +13,29 @@ from setuppy.types import Recipe
 from setuppy.types import SetuppyError
 
 
-def get_facts() -> dict[str, Any]:
+def get_facts() -> tuple[dict[str, Any], list[str]]:
   """Get basic system facts."""
   facts = dict()
+  system_tags = list()
+
   facts["home"] = os.getenv("HOME")
   facts["user"] = os.getenv("USER")
   facts["cwd"] = os.getcwd()
   facts["uname"] = os.uname().sysname
-  return facts
+
+  # Cast this so we can assume it's a string.
+  home = cast(str, facts["home"])
+
+  match facts["uname"]:
+    case "Linux":
+      facts["fontdir"] = f"{home}/.local/share/fonts"
+      system_tags += ["linux"]
+
+    case "Darwin":
+      facts["fontdir"] = f"{home}/Library/Fonts"
+      system_tags += ["macos"]
+
+  return facts, system_tags
 
 
 class Controller:
@@ -41,17 +57,11 @@ class Controller:
     """
     self.simulate = simulate
     self.verbosity = verbosity
-    self.tags = set(tags)
-    self.facts = get_facts()
+    self.facts, system_tags = get_facts()
+    self.tags = set(tags + system_tags)
 
     if self.verbosity >= 1:
       click.echo("Initializing setup...")
-
-    match self.facts["uname"]:
-      case "Linux":
-        self.tags.add("linux")
-      case "Darwin":
-        self.tags.add("macos")
 
   def should_skip(self, tags: list[str]) -> bool:
     """Evaluate whether an action should be skipped.

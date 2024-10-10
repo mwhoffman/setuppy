@@ -41,7 +41,7 @@ from setuppy.types import SetuppyError
 def main(
   *,
   filenames: tuple[str],
-  tags: list[str],
+  tags: tuple[str],
   simulate: bool,
   verbosity: int,
   log_to_stdout: bool,
@@ -55,7 +55,7 @@ def main(
 
   # Instantiate the controller.
   controller = Controller(
-    tags=tags,
+    tags=list(tags),
     simulate=simulate,
     verbosity=verbosity,
   )
