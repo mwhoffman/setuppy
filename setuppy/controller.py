@@ -98,7 +98,7 @@ class Controller:
     if self.should_skip(recipe.tags, []):
       logging.info('Skipping recipe "%s"', recipe.name)
       if self.verbosity >= 2:
-        click.echo(msg + click.style(" [skipped]", fg="yellow"))
+        click.echo(msg + click.style(" [skipped]", fg="cyan"))
       return
 
     logging.info('Running recipe "%s"', recipe.name)
