@@ -6,6 +6,7 @@ import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
+from setuppy.commands.base import CommandOutput
 
 
 @dataclasses.dataclass
@@ -18,7 +19,7 @@ class Brew(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> bool:
+  ) -> CommandOutput:
     """Run a brew action."""
     changed = False
 
@@ -28,9 +29,9 @@ class Brew(BaseCommand):
 
     if simulate:
       logging.info('Skipping command "%s"', cmd)
-      return changed
+      return CommandOutput(changed)
 
     # TODO: Run the command.
     logging.info('Running command "%s"', cmd)
 
-    return changed
+    return CommandOutput(changed)

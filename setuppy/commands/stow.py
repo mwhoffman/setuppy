@@ -8,7 +8,8 @@ import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
-from setuppy.commands.base import run_command
+from setuppy.commands.base import CommandOutput
+from setuppy.commands.utils import run_command
 from setuppy.types import SetuppyError
 
 
@@ -92,7 +93,7 @@ class Stow(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> bool:
+  ) -> CommandOutput:
     """Run the command."""
     # Get the version of stow.
     rc, stdout, _ = run_command("stow --version")
@@ -141,10 +142,8 @@ class Stow(BaseCommand):
       conflicts = ", ".join(conflicts)
       raise SetuppyError(f"Conflicting targets: {conflicts}")
 
-    # Otherwise we can find the links that were either removed or added. If any
-    # were this counts as a change.
+    # Otherwise we can find the links that were either removed or added.
     unlinked, linked = get_changes_from_stderr(stderr)
-    changed = bool(linked | unlinked)
 
     if unlinked:
       files = [str(target / f) for f in unlinked]
@@ -154,4 +153,5 @@ class Stow(BaseCommand):
       files = [str(target / f) for f in linked]
       logging.info("Linked files: %s", ", ".join(files))
 
-    return changed
+    # If any files were linked/unlinked this counts as a change.
+    return CommandOutput(changed=bool(linked | unlinked))

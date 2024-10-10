@@ -135,9 +135,9 @@ class Controller:
     command = CommandRegistry[action.kind](**action.kwargs)
 
     try:
-      changed = command(facts=self.facts, simulate=self.simulate)
+      result = command(facts=self.facts, simulate=self.simulate)
       if action.register:
-        self.registry[action.register] = changed
+        self.registry[action.register] = result.changed
 
     except Exception:
       if self.verbosity >= 1:
@@ -147,7 +147,7 @@ class Controller:
 
     # Mark the status of the command.
     if self.verbosity >= 1:
-      if changed:
+      if result.changed:
         click.secho(" [changed]", fg="yellow")
       else:
         click.secho(" [ok]", fg="green")
