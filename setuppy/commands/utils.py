@@ -27,7 +27,7 @@ def run_command(
   path = shutil.which(args[0])
 
   if path is None:
-    raise SetuppyError(f"Could not find command: {path}")
+    raise SetuppyError(f"Could not find command: {args[0]}")
 
   args[0] = path
 
@@ -55,13 +55,13 @@ def run_pipe(cmd1: str, cmd2: str) -> tuple[int, str, str]:
   args1 = shlex.split(cmd1)
   path1 = shutil.which(args1[0])
   if path1 is None:
-    raise SetuppyError(f"Could not find command: {path1}")
+    raise SetuppyError(f"Could not find command: {args1[0]}")
   args1[0] = path1
 
   args2 = shlex.split(cmd2)
   path2 = shutil.which(args2[0])
   if path2 is None:
-    raise SetuppyError(f"Could not find command: {path2}")
+    raise SetuppyError(f"Could not find command: {args2[0]}")
   args2[0] = path2
 
   logging.info('Running command "%s | %s"', " ".join(args1), " ".join(args2))
