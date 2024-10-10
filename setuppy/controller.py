@@ -59,17 +59,30 @@ class Controller:
     self.verbosity = verbosity
     self.facts, system_tags = get_facts()
     self.tags = set(tags + system_tags)
+    self.registry: dict[str, bool] = dict()
 
     if self.verbosity >= 1:
       click.echo("Initializing setup...")
 
-  def should_skip(self, tags: list[str]) -> bool:
+  def should_skip(self, tags: list[str], parents: list[str]) -> bool:
     """Evaluate whether an action should be skipped.
 
-    Returns true if an action associated with the given tags should be
-    skipped.
+    Returns true if an action associated with the given tags should be skipped
+    (i.e. the action's/recipe's tags are not a subset of the controller's tags)
+    or if none of its parents have changed.
     """
-    return not set(tags).issubset(self.tags)
+    # Skip if we're missing any tags.
+    if not set(tags).issubset(self.tags):
+      return True
+
+    # If we satisfy all the tags and are checking the status of no parents then
+    # we shouldn't skip.
+    if not parents:
+      return False
+
+    # Otherwise if none of our parents have changed we should skip. Note that if
+    # a parent has not been registered it is assumed to have not changed.
+    return not any(self.registry.get(parent, False) for parent in parents)
 
   def run(self, recipes: list[Recipe] | Recipe):
     """Run the given recipes."""
@@ -82,7 +95,7 @@ class Controller:
     # Output message for the recipe.
     msg = f"Running recipe: {recipe.name}"
 
-    if self.should_skip(recipe.tags):
+    if self.should_skip(recipe.tags, []):
       logging.info('Skipping recipe "%s"', recipe.name)
       if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="yellow"))
@@ -102,7 +115,7 @@ class Controller:
 
     # Skip; output a message if verbosity is high enough (otherwise we're just
     # silent).
-    if self.should_skip(action.tags):
+    if self.should_skip(action.tags, action.parents):
       logging.info('Skipping action "%s"', action.name)
       if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="cyan"))
@@ -118,10 +131,13 @@ class Controller:
         click.secho(" [error]", fg="red")
       raise SetuppyError('unknown action kind "{action.kind}"')
 
+    # TODO: verify the types of action.kwargs.
     command = CommandRegistry[action.kind](**action.kwargs)
 
     try:
       changed = command(facts=self.facts, simulate=self.simulate)
+      if action.register:
+        self.registry[action.register] = changed
 
     except Exception:
       if self.verbosity >= 1:
