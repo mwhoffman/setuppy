@@ -13,7 +13,7 @@ from setuppy.types import SetuppyError
 
 @dataclasses.dataclass
 class Github(BaseCommand):
-  """Implementation of the stow command."""
+  """Implementation of the github command."""
   sources: list[str]
   dest: str
 

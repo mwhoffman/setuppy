@@ -23,7 +23,7 @@ class Curl(BaseCommand):
     facts: dict[str, Any],
     simulate: bool,
   ) -> bool:
-    """Run a github action."""
+    """Run curl."""
     dest = pathlib.Path(self.dest.format(**facts))
     changed = False
 
