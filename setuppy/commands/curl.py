@@ -50,13 +50,11 @@ class Curl(BaseCommand):
 
       if simulate:
         logging.info('Skipping command "%s | %s"', cmd1, cmd2)
-        continue
-
-      target.mkdir(parents=True, exist_ok=True)
-      rc, _, _ = run_pipe(cmd1, cmd2)
-
-      if rc != 0:
-        msg = f'Error downloading target "{target}".'
-        raise SetuppyError(msg)
+      else:
+        target.mkdir(parents=True, exist_ok=True)
+        rc, _, _ = run_pipe(cmd1, cmd2)
+        if rc != 0:
+          msg = f'Error downloading target "{target}".'
+          raise SetuppyError(msg)
 
     return CommandResult(changed)

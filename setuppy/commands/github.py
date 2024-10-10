@@ -67,12 +67,10 @@ class Github(BaseCommand):
 
       if simulate:
         logging.info('Skipping command "%s"', cmd)
-        continue
-
-      rc, stderr, _ = run_command(cmd)
-
-      if rc != 0:
-        msg = f'Error cloning target "{target}".'
-        raise SetuppyError(msg)
+      else:
+        rc, stderr, _ = run_command(cmd)
+        if rc != 0:
+          msg = f'Error cloning target "{target}".'
+          raise SetuppyError(msg)
 
     return CommandResult(changed)
