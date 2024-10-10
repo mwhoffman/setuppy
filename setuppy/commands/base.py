@@ -25,7 +25,11 @@ class BaseCommand(metaclass=abc.ABCMeta):
     """Run the command."""
 
 
-def run_command(cmd: str) -> tuple[int, str, str]:
+def run_command(
+  cmd: str,
+  *,
+  sudo: bool = False,
+) -> tuple[int, str, str]:
   """Run the given command.
 
   Args:
@@ -42,6 +46,9 @@ def run_command(cmd: str) -> tuple[int, str, str]:
     raise SetuppyError(f"Could not find command: {path}")
 
   args[0] = path
+
+  if sudo:
+    args = ["/usr/bin/sudo", *args]
 
   logging.info('Running command "%s"', " ".join(args))
   proc = subprocess.run(
