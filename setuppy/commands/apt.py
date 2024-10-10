@@ -23,20 +23,25 @@ class Apt(BaseCommand):
     simulate: bool,
   ) -> CommandResult:
     """Run an apt action."""
-    # Determine the installed packages.
-    rc, stderr, _ = run_command(r"dpkg-query -f '${binary:Package}\n' -W")
-    if rc != 0:
-      raise SetuppyError("Error determining installed packages.")
+    # Try and get a cached list of packages.
+    installed = facts.get("apt_packages")
 
-    # TODO: Cache this in facts for later commands.
-    installed = stderr.strip().split()
+    # Get the installed packages if they're not cached.
+    if installed is None:
+      rc, stderr, _ = run_command(r"dpkg-query -f '${binary:Package}\n' -W")
+      if rc != 0:
+        raise SetuppyError("Error determining installed packages.")
+      installed = stderr.strip().split()
 
     packages = [p.format(**facts) for p in self.packages]
     packages = list(set(packages).difference(set(installed)))
 
+    installed.extend(packages)
+    facts = {"apt_packages": installed}
+
     # If packages is empty then nothing will change.
     if not packages:
-      return CommandResult(changed=False)
+      return CommandResult(changed=False, facts=facts)
 
     # Construct the command.
     packages = [shlex.quote(p) for p in packages]
@@ -44,11 +49,10 @@ class Apt(BaseCommand):
 
     if simulate:
       logging.info('Skipping command "sudo %s"', cmd)
-      return CommandResult(changed=True)
+    else:
+      rc, _, _ = run_command(cmd, sudo=True)
+      if rc != 0:
+        msg = f'Error running command "{cmd}".'
+        raise SetuppyError(msg)
 
-    rc, _, _ = run_command(cmd, sudo=True)
-    if rc != 0:
-      msg = f'Error running command "{cmd}".'
-      raise SetuppyError(msg)
-
-    return CommandResult(changed=True)
+    return CommandResult(changed=True, facts=facts)

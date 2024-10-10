@@ -136,6 +136,11 @@ class Controller:
 
     try:
       result = command(facts=self.facts, simulate=self.simulate)
+
+      # Update the controller's facts with any facts set by the action.
+      self.facts.update(**result.facts)
+
+      # Register a change for downstream actions.
       if action.register:
         self.registry[action.register] = result.changed
 
