@@ -6,7 +6,7 @@ from typing import Any
 
 
 @dataclasses.dataclass
-class CommandOutput:
+class CommandResult:
   """Return value of a command."""
   changed: bool
   facts: dict[str, Any] = dataclasses.field(default_factory=dict)
@@ -22,5 +22,5 @@ class BaseCommand(metaclass=abc.ABCMeta):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> CommandOutput:
+  ) -> CommandResult:
     """Run the command."""

@@ -5,7 +5,7 @@ import logging
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
-from setuppy.commands.base import CommandOutput
+from setuppy.commands.base import CommandResult
 from setuppy.commands.utils import run_command
 from setuppy.types import SetuppyError
 
@@ -20,13 +20,13 @@ class Command(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> CommandOutput:
+  ) -> CommandResult:
     """Run a basic command."""
     cmd = self.command.format(**facts)
 
     if simulate:
       logging.info('Skipping command "%s"', cmd)
-      return CommandOutput(changed=True)
+      return CommandResult(changed=True)
 
     # NOTE: this does not use shlex.quote because it may contain a command with
     # multiple terms.
@@ -35,4 +35,4 @@ class Command(BaseCommand):
       msg = f'Error running command "{cmd}".'
       raise SetuppyError(msg)
 
-    return CommandOutput(changed=True)
+    return CommandResult(changed=True)

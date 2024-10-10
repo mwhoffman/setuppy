@@ -8,7 +8,7 @@ import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
-from setuppy.commands.base import CommandOutput
+from setuppy.commands.base import CommandResult
 from setuppy.commands.utils import run_command
 from setuppy.types import SetuppyError
 
@@ -93,7 +93,7 @@ class Stow(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> CommandOutput:
+  ) -> CommandResult:
     """Run the command."""
     # Get the version of stow.
     rc, stdout, _ = run_command("stow --version")
@@ -154,4 +154,4 @@ class Stow(BaseCommand):
       logging.info("Linked files: %s", ", ".join(files))
 
     # If any files were linked/unlinked this counts as a change.
-    return CommandOutput(changed=bool(linked | unlinked))
+    return CommandResult(changed=bool(linked | unlinked))

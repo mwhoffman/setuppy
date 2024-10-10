@@ -8,7 +8,7 @@ import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
-from setuppy.commands.base import CommandOutput
+from setuppy.commands.base import CommandResult
 from setuppy.commands.utils import run_command
 from setuppy.types import SetuppyError
 
@@ -24,7 +24,7 @@ class Github(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> CommandOutput:
+  ) -> CommandResult:
     """Run a github action."""
     dest = pathlib.Path(self.dest.format(**facts))
     changed = False
@@ -75,4 +75,4 @@ class Github(BaseCommand):
         msg = f'Error cloning target "{target}".'
         raise SetuppyError(msg)
 
-    return CommandOutput(changed)
+    return CommandResult(changed)

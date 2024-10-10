@@ -8,7 +8,7 @@ import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
-from setuppy.commands.base import CommandOutput
+from setuppy.commands.base import CommandResult
 from setuppy.commands.utils import run_pipe
 from setuppy.types import SetuppyError
 
@@ -24,7 +24,7 @@ class Curl(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> CommandOutput:
+  ) -> CommandResult:
     """Run curl."""
     dest = pathlib.Path(self.dest.format(**facts))
     changed = False
@@ -59,4 +59,4 @@ class Curl(BaseCommand):
         msg = f'Error downloading target "{target}".'
         raise SetuppyError(msg)
 
-    return CommandOutput(changed)
+    return CommandResult(changed)

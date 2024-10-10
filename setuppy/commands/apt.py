@@ -6,7 +6,7 @@ import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
-from setuppy.commands.base import CommandOutput
+from setuppy.commands.base import CommandResult
 from setuppy.commands.utils import run_command
 from setuppy.types import SetuppyError
 
@@ -21,7 +21,7 @@ class Apt(BaseCommand):
     *,
     facts: dict[str, Any],
     simulate: bool,
-  ) -> CommandOutput:
+  ) -> CommandResult:
     """Run an apt action."""
     # Determine the installed packages.
     rc, stderr, _ = run_command(r"dpkg-query -f '${binary:Package}\n' -W")
@@ -36,7 +36,7 @@ class Apt(BaseCommand):
 
     # If packages is empty then nothing will change.
     if not packages:
-      return CommandOutput(changed=False)
+      return CommandResult(changed=False)
 
     # Construct the command.
     packages = [shlex.quote(p) for p in packages]
@@ -44,11 +44,11 @@ class Apt(BaseCommand):
 
     if simulate:
       logging.info('Skipping command "sudo %s"', cmd)
-      return CommandOutput(changed=True)
+      return CommandResult(changed=True)
 
     rc, _, _ = run_command(cmd, sudo=True)
     if rc != 0:
       msg = f'Error running command "{cmd}".'
       raise SetuppyError(msg)
 
-    return CommandOutput(changed=True)
+    return CommandResult(changed=True)
