@@ -27,8 +27,9 @@ class Command(BaseCommand):
       logging.info('Skipping command "%s"', cmd)
       return True
 
+    # NOTE: this does not use shlex.quote because it may contain a command with
+    # multiple terms.
     rc, _, _ = run_command(cmd)
-
     if rc != 0:
       msg = f'Error running command "{cmd}".'
       raise SetuppyError(msg)

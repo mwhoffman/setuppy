@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import os
 import pathlib
+import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -43,8 +44,8 @@ class Curl(BaseCommand):
         continue
 
       changed = True
-      cmd1 = f"curl -sSL {source}"
-      cmd2 = f"tar -x{taropt}f - -C {target}"
+      cmd1 = f"curl -sSL {shlex.quote(source)}"
+      cmd2 = f"tar -x{taropt}f - -C {shlex.quote(str(target))}"
 
       if simulate:
         logging.info('Skipping command "%s | %s"', cmd1, cmd2)

@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import pathlib
 import re
+import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -124,7 +125,12 @@ class Stow(BaseCommand):
       raise SetuppyError(msg)
 
     # Format the command itself.
-    cmd = f"stow -v --no-folding -d {stowdir} -t {target} -R {package}"
+    cmd = (
+      f"stow -v --no-folding "
+      f"-d {shlex.quote(str(stowdir))} "
+      f"-t {shlex.quote(str(target))} "
+      f"-R {shlex.quote(package)}"
+    )
     cmd += " -n" if simulate else ""
 
     # Run the command. If rc is nonzero there should be conflicts which we can

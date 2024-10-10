@@ -4,6 +4,7 @@ import dataclasses
 import logging
 import os
 import pathlib
+import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -42,7 +43,7 @@ class Github(BaseCommand):
           msg = f'Target "{target}" exists and is not a git directory.'
           raise SetuppyError(msg)
 
-        cmd = f"git --git-dir={gitdir} remote get-url origin"
+        cmd = f"git --git-dir={shlex.quote(str(gitdir))} remote get-url origin"
         rc, stderr, _ = run_command(cmd)
 
         if rc != 0:
@@ -61,7 +62,7 @@ class Github(BaseCommand):
         continue
 
       changed = True
-      cmd = f"git clone {url} {target}"
+      cmd = f"git clone {shlex.quote(url)} {shlex.quote(str(target))}"
 
       if simulate:
         logging.info('Skipping command "%s"', cmd)
