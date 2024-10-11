@@ -1,6 +1,7 @@
 """Command line interface for setup."""
 
 import logging
+import pathlib
 import sys
 
 import click
@@ -13,18 +14,28 @@ from setuppy.types import SetuppyError
 
 """Setup command line wrapper."""
 @click.command
-@click.argument("filenames", nargs=-1)
 @click.option(
   "-t",
   "tags",
+  metavar="TAG",
   multiple=True,
-  help="Tags; can be specified multiple times.",
+  help=(
+    "Include the given TAG; can be specified multiple times to include "
+    "multiple tags."
+  ),
+)
+@click.option(
+  "-r",
+  "recipedir",
+  metavar="RECIPEDIR",
+  default="recipes",
+  help='Directory to search for recipes in. Defaults to "recipes".',
 )
 @click.option(
   "-n",
   "simulate",
   is_flag=True,
-  help="Do nothing; simulate tasks and exit.",
+  help="Do nothing, i.e. simulate the tasks, but making no changes.",
 )
 @click.option(
   "-v",
@@ -36,17 +47,23 @@ from setuppy.types import SetuppyError
   "--log-to-stdout",
   "log_to_stdout",
   is_flag=True,
-  help="Log to stdout; ignores verbosity if set.",
+  help="Verbosely log to stdout (ignores the verbosity flag).",
 )
 def main(
   *,
-  filenames: tuple[str],
   tags: tuple[str],
+  recipedir: str,
   simulate: bool,
   verbosity: int,
   log_to_stdout: bool,
 ):
-  """Run setup for the given TAGS."""
+  """Run setup for the given recipes.
+
+  This will collect the recipes it finds in RECIPEDIR and run setup for the
+  associated actions. Tags can be specified with `-t TAG` to decide which
+  recipes and subsequent actions to include. A recipe or action will only be run
+  if all of its tags are specified.
+  """
 
   # Set our logging level.
   if log_to_stdout:
@@ -61,6 +78,7 @@ def main(
   )
 
   try:
+    filenames = list(pathlib.Path(recipedir).glob("*.toml"))
     recipes = [Binder(Recipe).parse_toml(filename) for filename in filenames]
     controller.run(recipes)
 
