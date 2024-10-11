@@ -56,7 +56,7 @@ def main(
   simulate: bool,
   verbosity: int,
   log_to_stdout: bool,
-):
+) -> int:
   """Run setup for the given recipes.
 
   This will collect the recipes it finds in RECIPEDIR and run setup for the
@@ -84,8 +84,10 @@ def main(
 
   except SetuppyError as e:
     click.secho(str(e), fg="red")
-    sys.exit(-1)
+    return -1
+
+  return 0
 
 
 if __name__ == "__main__":
-  main()
+  sys.exit(main())
