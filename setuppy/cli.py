@@ -5,7 +5,7 @@ import pathlib
 import sys
 
 import click
-from dataclass_binder import Binder
+import  dataclass_binder
 
 from setuppy.controller import Controller
 from setuppy.types import Recipe
@@ -79,7 +79,10 @@ def main(
 
   try:
     filenames = list(pathlib.Path(recipedir).glob("*.toml"))
-    recipes = [Binder(Recipe).parse_toml(filename) for filename in filenames]
+    recipes = [
+      dataclass_binder.Binder(Recipe).parse_toml(filename)
+      for filename in filenames
+    ]
     controller.run(recipes)
 
   except SetuppyError as e:

@@ -6,11 +6,16 @@ from typing import Any
 from typing import cast
 
 import click
+import  dataclass_binder
 
 from setuppy.commands import CommandRegistry
 from setuppy.types import Action
 from setuppy.types import Recipe
 from setuppy.types import SetuppyError
+
+
+MAX_MSG_LEN = 30
+MAX_TAGMSG_LEN = 30
 
 
 def get_facts() -> tuple[dict[str, Any], list[str]]:
@@ -61,9 +66,6 @@ class Controller:
     self.tags = set(tags + system_tags)
     self.registry: dict[str, bool] = dict()
 
-    if self.verbosity >= 1:
-      click.echo("Initializing setup...")
-
   def should_skip(self, tags: list[str], parents: list[str]) -> bool:
     """Evaluate whether an action should be skipped.
 
@@ -94,6 +96,12 @@ class Controller:
     """Run the given recipe."""
     # Output message for the recipe.
     msg = f"Running recipe: {recipe.name}"
+    msg += "." * (MAX_MSG_LEN - len(msg))
+
+    if self.verbosity >= 3:
+      tagmsg = " [" + ", ".join(recipe.tags) + "]"
+      tagmsg += "." * (MAX_TAGMSG_LEN - len(tagmsg))
+      msg += tagmsg
 
     if self.should_skip(recipe.tags, []):
       logging.info('Skipping recipe "%s"', recipe.name)
@@ -111,7 +119,13 @@ class Controller:
   def run_action(self, action: Action):
     """Run the given action."""
     # Output message for the action.
-    msg = f"  {action.name}..."
+    msg = f"  {action.name}"
+    msg = msg + "." * (MAX_MSG_LEN - len(msg))
+
+    if self.verbosity >= 3:
+      tagmsg = " [" + ", ".join(action.tags) + "]"
+      tagmsg += "." * (MAX_TAGMSG_LEN - len(tagmsg))
+      msg += tagmsg
 
     # Skip; output a message if verbosity is high enough (otherwise we're just
     # silent).
@@ -131,8 +145,9 @@ class Controller:
         click.secho(" [error]", fg="red")
       raise SetuppyError(f'unknown action kind "{action.kind}"')
 
-    # TODO: verify the types of action.kwargs.
-    command = CommandRegistry[action.kind](**action.kwargs)
+    # TODO: Catch an error if raised.
+    binder = dataclass_binder.Binder(CommandRegistry[action.kind])
+    command = binder.bind(action.kwargs)
 
     try:
       result = command(facts=self.facts, simulate=self.simulate)
