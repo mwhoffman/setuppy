@@ -23,6 +23,12 @@ from setuppy.types import SetuppyError
   help="Include the given TAG.",
 )
 @click.option(
+  "-a",
+  "force_all_tags",
+  is_flag=True,
+  help="Include all tags; ignores -t.",
+)
+@click.option(
   "-c",
   "configdir",
   metavar="CONFIGDIR",
@@ -44,11 +50,12 @@ from setuppy.types import SetuppyError
   "--log-to-stdout",
   "log_to_stdout",
   is_flag=True,
-  help="Verbosely log to stdout (ignores the verbosity flag).",
+  help="Verbosely log to stdout; ignores -v.",
 )
 def main(
   *,
   tags: tuple[str],
+  force_all_tags: bool,
   configdir: str | None,
   simulate: bool,
   verbosity: int,
@@ -68,7 +75,6 @@ def main(
   Note that any relative path specified in a recipe is taken to be relative to
   CONFIGDIR.
   """
-
   # Set our logging level.
   if log_to_stdout:
     verbosity = 0
@@ -106,15 +112,15 @@ def main(
     for filename in list(recipepath.glob("*.toml"))
   ]
 
-  # Instantiate the controller.
-  controller = Controller(
-    tags=list(tags),
-    simulate=simulate,
-    verbosity=verbosity,
-  )
-
   try:
-    controller.run(recipes)
+    # Instantiate and run the controller.
+    Controller(
+      recipes=recipes,
+      tags=list(tags),
+      force_all_tags=force_all_tags,
+      simulate=simulate,
+      verbosity=verbosity,
+    ).run()
 
   except SetuppyError as e:
     click.secho(f"Error: {e}", fg="red")

@@ -2,6 +2,7 @@
 
 import logging
 import os
+from collections.abc import Iterable
 from typing import Any
 from typing import cast
 
@@ -15,7 +16,8 @@ from setuppy.types import SetuppyError
 
 
 MAX_MSG_LEN = 30
-MAX_TAGMSG_LEN = 40
+MAX_TAGMSG_LEN = 30
+SYSTEM_TAGS = {"macos", "linux"}
 
 
 class Controller:
@@ -24,27 +26,52 @@ class Controller:
   def __init__(
     self,
     *,
+    recipes: list[Recipe],
     tags: list[str],
+    force_all_tags: bool,
     simulate: bool,
     verbosity: int,
   ):
     """Initialize the controller.
 
     Args:
+      recipes: collection of recipes to run.
       tags: a set of tags to enable.
+      force_all_tags: force all tags that exist in the given recipes.
       simulate: if true, simulate all commands.
       verbosity: how verbose to be.
     """
+    # Find all tags specified in the recipes.
+    all_tags = set()
+    for recipe in recipes:
+      all_tags |= set(recipe.tags)
+      for action in recipe.actions:
+        all_tags |= set(action.tags)
+
+    # Remove any system tags.
+    all_tags -= SYSTEM_TAGS
+
+    # Set the tags if we're forcing them to be everything.
+    if force_all_tags:
+      if tags:
+        msg = "cannot specify tags and force_all_tags at the same time."
+        raise SetuppyError(msg)
+      tags = list(all_tags)
+
+    else:
+      _error_if_tags(set(tags) & SYSTEM_TAGS, "disallowed system")
+      _error_if_tags(set(tags) - all_tags, "unknown")
+
     self.simulate = simulate
     self.verbosity = verbosity
     self.facts, system_tags = _get_facts()
+    self.recipes = recipes
     self.tags = set(tags + system_tags)
     self.registry: dict[str, bool] = dict()
 
-  def run(self, recipes: list[Recipe] | Recipe):
+  def run(self):
     """Run the given recipes."""
-    recipes = recipes if isinstance(recipes, list) else [recipes]
-    for recipe in recipes:
+    for recipe in self.recipes:
       self._run_recipe(recipe)
 
   def _should_skip(self, tags: list[str], parents: list[str]) -> bool:
@@ -146,6 +173,17 @@ class Controller:
         click.secho(" [changed]", fg="yellow")
       else:
         click.secho(" [ok]", fg="green")
+
+
+def _error_if_tags(tags: Iterable[str], descriptor: str):
+  """Raise an error if tags is not empty."""
+  if tags:
+    msg_tags = [f'"{tag}"' for tag in tags]
+    msg = (
+      f'passed {descriptor} tag{"s" if len(msg_tags) > 1 else ""} '
+      f'{", ".join(msg_tags)}.'
+    )
+    raise SetuppyError(msg)
 
 
 def _get_facts() -> tuple[dict[str, Any], list[str]]:
