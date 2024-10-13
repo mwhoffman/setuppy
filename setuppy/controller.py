@@ -6,7 +6,7 @@ from typing import Any
 from typing import cast
 
 import click
-import  dataclass_binder
+import dataclass_binder
 
 from setuppy.commands import CommandRegistry
 from setuppy.types import Action
@@ -15,32 +15,7 @@ from setuppy.types import SetuppyError
 
 
 MAX_MSG_LEN = 30
-MAX_TAGMSG_LEN = 30
-
-
-def get_facts() -> tuple[dict[str, Any], list[str]]:
-  """Get basic system facts."""
-  facts = dict()
-  system_tags = list()
-
-  facts["home"] = os.getenv("HOME")
-  facts["user"] = os.getenv("USER")
-  facts["cwd"] = os.getcwd()
-  facts["uname"] = os.uname().sysname
-
-  # Cast this so we can assume it's a string.
-  home = cast(str, facts["home"])
-
-  match facts["uname"]:
-    case "Linux":
-      facts["fontdir"] = f"{home}/.local/share/fonts"
-      system_tags += ["linux"]
-
-    case "Darwin":
-      facts["fontdir"] = f"{home}/Library/Fonts"
-      system_tags += ["macos"]
-
-  return facts, system_tags
+MAX_TAGMSG_LEN = 40
 
 
 class Controller:
@@ -62,11 +37,17 @@ class Controller:
     """
     self.simulate = simulate
     self.verbosity = verbosity
-    self.facts, system_tags = get_facts()
+    self.facts, system_tags = _get_facts()
     self.tags = set(tags + system_tags)
     self.registry: dict[str, bool] = dict()
 
-  def should_skip(self, tags: list[str], parents: list[str]) -> bool:
+  def run(self, recipes: list[Recipe] | Recipe):
+    """Run the given recipes."""
+    recipes = recipes if isinstance(recipes, list) else [recipes]
+    for recipe in recipes:
+      self._run_recipe(recipe)
+
+  def _should_skip(self, tags: list[str], parents: list[str]) -> bool:
     """Evaluate whether an action should be skipped.
 
     Returns true if an action associated with the given tags should be skipped
@@ -86,13 +67,7 @@ class Controller:
     # a parent has not been registered it is assumed to have not changed.
     return not any(self.registry.get(parent, False) for parent in parents)
 
-  def run(self, recipes: list[Recipe] | Recipe):
-    """Run the given recipes."""
-    recipes = recipes if isinstance(recipes, list) else [recipes]
-    for recipe in recipes:
-      self.run_recipe(recipe)
-
-  def run_recipe(self, recipe: Recipe):
+  def _run_recipe(self, recipe: Recipe):
     """Run the given recipe."""
     # Output message for the recipe.
     msg = f"Running recipe: {recipe.name}"
@@ -103,7 +78,7 @@ class Controller:
       tagmsg += "." * (MAX_TAGMSG_LEN - len(tagmsg))
       msg += tagmsg
 
-    if self.should_skip(recipe.tags, []):
+    if self._should_skip(recipe.tags, []):
       logging.info('Skipping recipe "%s"', recipe.name)
       if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="cyan"))
@@ -114,9 +89,9 @@ class Controller:
       click.echo(msg)
 
     for action in recipe.actions:
-      self.run_action(action)
+      self._run_action(action)
 
-  def run_action(self, action: Action):
+  def _run_action(self, action: Action):
     """Run the given action."""
     # Output message for the action.
     msg = f"  {action.name}"
@@ -129,7 +104,7 @@ class Controller:
 
     # Skip; output a message if verbosity is high enough (otherwise we're just
     # silent).
-    if self.should_skip(action.tags, action.parents):
+    if self._should_skip(action.tags, action.parents):
       logging.info('Skipping action "%s"', action.name)
       if self.verbosity >= 2:
         click.echo(msg + click.style(" [skipped]", fg="cyan"))
@@ -171,3 +146,28 @@ class Controller:
         click.secho(" [changed]", fg="yellow")
       else:
         click.secho(" [ok]", fg="green")
+
+
+def _get_facts() -> tuple[dict[str, Any], list[str]]:
+  """Get basic system facts."""
+  facts = dict()
+  system_tags = list()
+
+  facts["home"] = os.getenv("HOME")
+  facts["user"] = os.getenv("USER")
+  facts["cwd"] = os.getcwd()
+  facts["uname"] = os.uname().sysname
+
+  # Cast this so we can assume it's a string.
+  home = cast(str, facts["home"])
+
+  match facts["uname"]:
+    case "Linux":
+      facts["fontdir"] = f"{home}/.local/share/fonts"
+      system_tags += ["linux"]
+
+    case "Darwin":
+      facts["fontdir"] = f"{home}/Library/Fonts"
+      system_tags += ["macos"]
+
+  return facts, system_tags
