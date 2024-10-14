@@ -30,7 +30,104 @@ STOW_CONFLICT_RE = {
 STOW_CONFLICT_RE["2.4.1"] = STOW_CONFLICT_RE["2.4.0"]
 
 
-def get_conflicts_from_stderr(stderr: str, version: str) -> set[str]:
+@dataclasses.dataclass
+class Stow(BaseCommand):
+  """Implementation of the stow command."""
+  package: str
+  stowdir: str = "dotfiles"
+  targetdir: str = "{home}"
+
+  def __call__(
+    self,
+    *,
+    facts: dict[str, Any],
+    simulate: bool,
+  ) -> CommandResult:
+    """Run the command."""
+    # Get the version of stow.
+    version = facts.get("stow_version")
+
+    if not version:
+      version = _get_stow_version()
+
+    # Format the input options.
+    package = self.package.format(**facts)
+    stowdir = pathlib.Path(self.stowdir.format(**facts))
+    targetdir = pathlib.Path(self.targetdir.format(**facts))
+
+    if not stowdir.exists():
+      msg = f'stowdir "{stowdir}" does not exist.'
+      raise SetuppyError(msg)
+
+    if not (stowdir / package).exists():
+      msg = f'package directory "{stowdir/package}" does not exist.'
+      raise SetuppyError(msg)
+
+    # Format the command itself.
+    cmd = (
+      f"stow -v --no-folding "
+      f"-d {shlex.quote(str(stowdir))} "
+      f"-t {shlex.quote(str(targetdir))} "
+      f"-R {shlex.quote(package)}"
+    )
+    cmd += " -n" if simulate else ""
+
+    # Run the command. If rc is nonzero there should be conflicts which we can
+    # identify and mark as a failure.
+    rc, _, stderr = run_command(cmd)
+    if rc != 0:
+      conflicts = _get_conflicts_from_stderr(stderr, version)
+      conflicts = [f'"{targetdir/conflict}"' for conflict in conflicts]
+      msg = f"target file{'s' if len(conflicts) > 1 else ''} "
+      match len(conflicts):
+        case 1:
+          msg += conflicts[0]
+        case 2:
+          msg += " and ".join(conflicts)
+        case _:
+          msg += ", ".join(conflicts[:-1]) + ", and " + conflicts[-1]
+      msg += f" already exist{'s' if len(conflicts) == 1 else ''}."
+      raise SetuppyError(msg)
+
+    # Otherwise we can find the links that were either removed or added.
+    unlinked, linked = _get_changes_from_stderr(stderr)
+
+    if unlinked:
+      files = [f'"{targetdir/file}"' for file in unlinked]
+      logging.info("Unlinking files %s", ", ".join(files))
+
+    if linked:
+      files = [f'"{targetdir/file}"' for file in linked]
+      logging.info("Linking files %s", ", ".join(files))
+
+    return CommandResult(
+        changed=bool(linked | unlinked),
+        facts={"stow_version": version},
+    )
+
+
+def _get_stow_version() -> str:
+  """Get the version of stow."""
+  rc, stdout, _ = run_command("stow --version")
+  if rc != 0:
+    raise SetuppyError("could not get stow version.")
+
+  match = re.match(
+    r"^stow \(GNU Stow\) version (?P<version>\d+\.\d+\.\d+)$",
+    stdout.strip())
+
+  if not match:
+    raise SetuppyError("could not parse stow version.")
+
+  version = match.group("version")
+
+  if version not in STOW_CONFLICT_RE:
+    raise SetuppyError(f'unsupported stow version "{version}".')
+
+  return version
+
+
+def _get_conflicts_from_stderr(stderr: str, version: str) -> set[str]:
   """Parse the stderr returned by stow and find any conflicts.
 
   Args:
@@ -49,7 +146,7 @@ def get_conflicts_from_stderr(stderr: str, version: str) -> set[str]:
   return conflicts
 
 
-def get_changes_from_stderr(stderr: str) -> tuple[set[str], set[str]]:
+def _get_changes_from_stderr(stderr: str) -> tuple[set[str], set[str]]:
   """Return the set of unlinked and linked changes.
 
   Args:
@@ -79,79 +176,3 @@ def get_changes_from_stderr(stderr: str) -> tuple[set[str], set[str]]:
       linked.add(match.group("target"))
 
   return unlinked-linked, linked-unlinked
-
-
-@dataclasses.dataclass
-class Stow(BaseCommand):
-  """Implementation of the stow command."""
-  package: str
-  stowdir: str = "dotfiles"
-  target: str = "{home}"
-
-  def __call__(
-    self,
-    *,
-    facts: dict[str, Any],
-    simulate: bool,
-  ) -> CommandResult:
-    """Run the command."""
-    # Get the version of stow.
-    rc, stdout, _ = run_command("stow --version")
-    if rc != 0:
-      raise SetuppyError("Could not get stow version")
-
-    match = re.match(
-      r"^stow \(GNU Stow\) version (?P<version>\d+\.\d+\.\d+)$",
-      stdout.strip())
-
-    if not match:
-      raise SetuppyError("Could not parse stow version")
-
-    version = match.group("version")
-
-    if version not in STOW_CONFLICT_RE:
-      raise SetuppyError(f'Unsupported stow version "{version}"')
-
-    # Format the input options.
-    package = self.package.format(**facts)
-    stowdir = pathlib.Path(self.stowdir.format(**facts))
-    target = pathlib.Path(self.target.format(**facts))
-
-    if not stowdir.exists():
-      msg = f'stowdir "{stowdir}" does not exist'
-      raise SetuppyError(msg)
-
-    if not (stowdir / package).exists():
-      msg = f'package directory "{stowdir}/{package}" does not exist'
-      raise SetuppyError(msg)
-
-    # Format the command itself.
-    cmd = (
-      f"stow -v --no-folding "
-      f"-d {shlex.quote(str(stowdir))} "
-      f"-t {shlex.quote(str(target))} "
-      f"-R {shlex.quote(package)}"
-    )
-    cmd += " -n" if simulate else ""
-
-    # Run the command. If rc is nonzero there should be conflicts which we can
-    # identify and mark as a failure.
-    rc, _, stderr = run_command(cmd)
-    if rc != 0:
-      conflicts = get_conflicts_from_stderr(stderr, version)
-      conflicts = ", ".join(conflicts)
-      raise SetuppyError(f"Conflicting targets: {conflicts}")
-
-    # Otherwise we can find the links that were either removed or added.
-    unlinked, linked = get_changes_from_stderr(stderr)
-
-    if unlinked:
-      files = [str(target / f) for f in unlinked]
-      logging.info("Unlinked files: %s", ", ".join(files))
-
-    if linked:
-      files = [str(target / f) for f in linked]
-      logging.info("Linked files: %s", ", ".join(files))
-
-    # If any files were linked/unlinked this counts as a change.
-    return CommandResult(changed=bool(linked | unlinked))
