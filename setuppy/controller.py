@@ -71,7 +71,9 @@ class Controller:
 
   def run(self):
     """Run the given recipes."""
-    for recipe in self.recipes:
+    # Sort the recipes based on priority; lowest comes first so negate it so
+    # highest priority items come first.
+    for recipe in sorted(self.recipes, key=lambda recipe: -recipe.priority):
       self._run_recipe(recipe)
 
   def _should_skip(self, tags: list[str], parents: list[str]) -> bool:

@@ -21,6 +21,7 @@ class Recipe:
   """Recipe data structure."""
   name: str
   actions: list[Action]
+  priority: int = 0
   tags: list[str] = field(default_factory=list)
 
 
