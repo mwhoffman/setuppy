@@ -4,10 +4,10 @@ import logging
 import os
 import pathlib
 import sys
-import tomllib
 
 import click
 import dataclass_binder
+import tomllib
 
 from setuppy.controller import Controller
 from setuppy.types import Recipe
