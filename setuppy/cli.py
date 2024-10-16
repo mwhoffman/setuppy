@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import sys
+import tomllib
 
 import click
 import dataclass_binder
@@ -106,6 +107,14 @@ def main(
     click.secho(f"Error: {msg}", fg="red")
     return -1
 
+  # Gather variables if they exist.
+  variablepath = pathlib.Path("variables.toml")
+  if variablepath.is_file():
+    with variablepath.open("rb") as f:
+      variables = tomllib.load(f)
+  else:
+    variables = {}
+
   # TODO: catch Binder errors.
   recipes = [
     dataclass_binder.Binder(Recipe).parse_toml(filename)
@@ -117,6 +126,7 @@ def main(
     Controller(
       recipes=recipes,
       tags=list(tags),
+      variables=variables,
       force_all_tags=force_all_tags,
       simulate=simulate,
       verbosity=verbosity,

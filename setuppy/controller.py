@@ -28,6 +28,7 @@ class Controller:
     *,
     recipes: list[Recipe],
     tags: list[str],
+    variables: dict[str, Any],
     force_all_tags: bool,
     simulate: bool,
     verbosity: int,
@@ -37,6 +38,7 @@ class Controller:
     Args:
       recipes: collection of recipes to run.
       tags: a set of tags to enable.
+      variables: additional facts specified.
       force_all_tags: force all tags that exist in the given recipes.
       simulate: if true, simulate all commands.
       verbosity: how verbose to be.
@@ -68,6 +70,9 @@ class Controller:
     self.recipes = recipes
     self.tags = set(tags + system_tags)
     self.registry: dict[str, bool] = dict()
+
+    # Add variables as additional facts.
+    self.facts.update(variables)
 
   def run(self):
     """Run the given recipes."""
