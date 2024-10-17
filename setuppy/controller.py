@@ -78,7 +78,8 @@ class Controller:
     if missing_variables:
       msg = "missing required variable"
       msg += f"{'s' if len(missing_variables) > 0 else ''} "
-      msg += ", ".join(f'"{v}"' for v in missing_variables) + "."
+      msg += ", ".join(f'"{v}"' for v in missing_variables) + ". "
+      msg += 'Add them to "variables.toml".'
       raise SetuppyError(msg)
 
     # Add variables as additional facts.
