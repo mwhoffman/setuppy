@@ -12,9 +12,32 @@ dependencies = [
   "dataclass_binder",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "basedpyright",
+  "coverage[toml]",
+  "pytest",
+  "pytest-cov",
+]
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
 version = {attr = "setuppy.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = "tests"
+pythonpath = "tests"
+addopts = [
+  "--cov=grax",
+  "--import-mode=importlib",
+  "--verbose",
+]
+
+[tool.coverage.run]
+branch = true
+
+[tool.pyright]
+typeCheckingMode = "standard"
