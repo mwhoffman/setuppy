@@ -1,5 +1,10 @@
 """Implementation of the stow command."""
 
+# The implementation of this command drew initial inspiriation for the conflict
+# checks from https://github.com/caian-org/ansible-stow, particularly with
+# respect to the regex used, which follows the example given in that earlier
+# code.
+
 import dataclasses
 import logging
 import pathlib
