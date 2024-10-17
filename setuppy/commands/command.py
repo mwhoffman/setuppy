@@ -1,4 +1,4 @@
-"""Implementation of a basic command."""
+"""Implementation of a basic shell command."""
 
 import dataclasses
 import logging
@@ -12,7 +12,12 @@ from setuppy.types import SetuppyError
 
 @dataclasses.dataclass
 class Command(BaseCommand):
-  """Implementation of a basic command."""
+  """Run a basic shell command.
+
+  This command runs a basic shell command passed as a string. Because we don't
+  know anything else about the command this will always mark the command as
+  having caused a change.
+  """
   command: str
 
   def __call__(
@@ -21,7 +26,7 @@ class Command(BaseCommand):
     facts: dict[str, Any],
     simulate: bool,
   ) -> CommandResult:
-    """Run a basic command."""
+    """Run the command or do nothing if simulate is True."""
     cmd = self.command.format(**facts)
 
     if simulate:

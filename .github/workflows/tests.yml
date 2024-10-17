@@ -25,3 +25,9 @@ jobs:
 
       - name: Check types
         run: basedpyright setuppy
+
+      - name: Run tests
+        run: pytest ./tests
+
+      - name: Run coveralls
+        uses: coverallsapp/github-action@v2
