@@ -10,6 +10,7 @@ import dataclass_binder
 import tomllib
 
 from setuppy.controller import Controller
+from setuppy.types import Config
 from setuppy.types import Recipe
 from setuppy.types import SetuppyError
 
@@ -30,10 +31,10 @@ from setuppy.types import SetuppyError
   help="Include all tags; ignores -t.",
 )
 @click.option(
-  "-c",
-  "configdir",
-  metavar="CONFIGDIR",
-  help="Set the config working directory.",
+  "-d",
+  "basedir",
+  metavar="BASEDIR",
+  help="Set the base working directory.",
 )
 @click.option(
   "-n",
@@ -57,7 +58,7 @@ def main(
   *,
   tags: tuple[str],
   force_all_tags: bool,
-  configdir: str | None,
+  basedir: str | None,
   simulate: bool,
   verbosity: int,
   log_to_stdout: bool,
@@ -69,12 +70,12 @@ def main(
   multiple tags. A recipe or action will only be run if all of its tags are
   specified.
 
-  Recipes consist of .toml files and will be searched for in CONFIGDIR/recipes/.
-  If CONFIGDIR is not specified this will default to the same directory as the
+  Recipes consist of .toml files and will be searched for in BASEDIR/recipes/.
+  If BASEDIR is not specified this will default to the same directory as the
   setup script itself (or "." if the setuppy module is called directly).
 
   Note that any relative path specified in a recipe is taken to be relative to
-  CONFIGDIR.
+  BASEDIR.
   """
   # Set our logging level.
   if log_to_stdout:
@@ -84,21 +85,21 @@ def main(
   # Find the default config directory. If we're running under "-m setuppy.cli"
   # (i.e. this module) we'll default to "."; otherwise we'll set it based on
   # whatever directory is running the main script (which we get from argv).
-  if not configdir:
+  if not basedir:
     if __name__ == "__main__":
-      configdir = "."
+      basedir = "."
     else:
-      configdir = str(pathlib.Path(sys.argv[0]).parent)
+      basedir = str(pathlib.Path(sys.argv[0]).parent)
 
   # Make sure the config directory exists.
-  configpath = pathlib.Path(configdir)
-  if not configpath.is_dir():
-    msg = f'could not find config directory "{configpath.absolute()}"'
+  basepath = pathlib.Path(basedir)
+  if not basepath.is_dir():
+    msg = f'could not find config directory "{basepath.absolute()}"'
     click.secho(f"Error: {msg}", fg="red")
     return -1
 
-  # Change directory so that from now on everything is relative to configdir.
-  os.chdir(configpath)
+  # Change directory so that from now on everything is relative to basedir.
+  os.chdir(basepath)
 
   # Make sure the recipe directory exists.
   recipepath = pathlib.Path("recipes")
@@ -115,6 +116,13 @@ def main(
   else:
     variables = {}
 
+  # Gather variables if they exist.
+  configpath = pathlib.Path("config.toml")
+  if configpath.is_file():
+    config = dataclass_binder.Binder(Config).parse_toml(configpath)
+  else:
+    config = Config()
+
   # TODO: catch Binder errors.
   recipes = [
     dataclass_binder.Binder(Recipe).parse_toml(filename)
@@ -127,6 +135,7 @@ def main(
       recipes=recipes,
       tags=list(tags),
       variables=variables,
+      config=config,
       force_all_tags=force_all_tags,
       simulate=simulate,
       verbosity=verbosity,

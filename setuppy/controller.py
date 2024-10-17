@@ -11,6 +11,7 @@ import dataclass_binder
 
 from setuppy.commands import CommandRegistry
 from setuppy.types import Action
+from setuppy.types import Config
 from setuppy.types import Recipe
 from setuppy.types import SetuppyError
 
@@ -29,6 +30,7 @@ class Controller:
     recipes: list[Recipe],
     tags: list[str],
     variables: dict[str, Any],
+    config: Config,
     force_all_tags: bool,
     simulate: bool,
     verbosity: int,
@@ -38,7 +40,8 @@ class Controller:
     Args:
       recipes: collection of recipes to run.
       tags: a set of tags to enable.
-      variables: additional facts specified.
+      variables: additional facts specified as variables.
+      config: configuration options.
       force_all_tags: force all tags that exist in the given recipes.
       simulate: if true, simulate all commands.
       verbosity: how verbose to be.
@@ -70,6 +73,13 @@ class Controller:
     self.recipes = recipes
     self.tags = set(tags + system_tags)
     self.registry: dict[str, bool] = dict()
+
+    missing_variables = set(config.required_variables) - set(variables.keys())
+    if missing_variables:
+      msg = "missing required variable"
+      msg += f"{'s' if len(missing_variables) > 0 else ''} "
+      msg += ", ".join(f'"{v}"' for v in missing_variables) + "."
+      raise SetuppyError(msg)
 
     # Add variables as additional facts.
     self.facts.update(variables)

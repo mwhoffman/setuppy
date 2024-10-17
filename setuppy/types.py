@@ -25,5 +25,11 @@ class Recipe:
   tags: list[str] = field(default_factory=list)
 
 
+@dataclass
+class Config:
+  """Recipe data structure."""
+  required_variables: list[str] = field(default_factory=list)
+
+
 class SetuppyError(RuntimeError):
   """Error raised within setuppy."""
