@@ -2,6 +2,7 @@
 
 import dataclasses
 import logging
+import os
 import pathlib
 from typing import Any
 
@@ -31,9 +32,9 @@ class Template(BaseCommand):
       raise SetuppyError(msg)
 
     changed = False
-    for path, _, files in source.walk():
+    for path, _, files in os.walk(source):
       for f in files:
-        file = path / f
+        file = pathlib.Path(path) / f
         target = dest / file.relative_to(source)
 
         if target.exists():
