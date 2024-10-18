@@ -9,7 +9,7 @@ from setuppy.types import SetuppyError
 
 
 @patch("setuppy.commands.apt.run_command")
-def test_command(rc):
+def test_apt(rc):
   apt = Apt(["foo", "bar", "baz"])
 
   # Run dpkg and raise an error if that fails.
