@@ -13,7 +13,18 @@ from setuppy.types import SetuppyError
 
 @dataclasses.dataclass
 class Brew(BaseCommand):
-  """Implementation of the brew command."""
+  """Run brew to install a collection of packages.
+
+  This command uses brew to install the given collection of packages. It will
+  first check what packages are installed, skipping this step if
+  `facts["brew_packages"]` exists containing a cached list of installed
+  packages. It will then attempt to install those requested packages that are
+  missing.
+
+  The returned `CommandResult` will have `result.changed` set to `True` if any
+  packages were installed, and `result.facts["brew_packages"]` will correspond
+  to a list of those packages installed after this command has run.
+  """
   packages: list[str]
 
   def __call__(
