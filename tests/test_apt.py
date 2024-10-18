@@ -1,4 +1,4 @@
-"""Test for the raw "command" command."""
+"""Test for the apt command."""
 
 from unittest.mock import patch
 
