@@ -15,7 +15,18 @@ from setuppy.types import SetuppyError
 
 @dataclasses.dataclass
 class Curl(BaseCommand):
-  """Implementation of the curl command."""
+  """Run curl to download and explode a tarball.
+
+  This command takes a collection of `sources`, i.e. a list of urls, and will
+  use curl to download them and expand/untar them into the given `dest`
+  directory. The exact target directory will be `dest/basename` where basename
+  is the base name of the source url (i.e. without its suffix). The suffix of
+  the source is used to determine how to expand it. Currently this onyl supports
+  files of the form `.tar.xz`.
+
+  The returned `CommandResult` will have `result.changed` set to `True` if a
+  change is made, i.e. if the target directory doesn't already exist.
+  """
   sources: list[str]
   dest: str
 
@@ -25,7 +36,7 @@ class Curl(BaseCommand):
     facts: dict[str, Any],
     simulate: bool,
   ) -> CommandResult:
-    """Run curl."""
+    """Run the curl command."""
     dest = pathlib.Path(self.dest.format(**facts))
     changed = False
 
@@ -40,9 +51,11 @@ class Curl(BaseCommand):
       else:
         raise SetuppyError('Unknown suffix "{suffix}"')
 
-      if target.exists() and target.is_dir():
-        logging.info('Target "%s" exists', target)
-        continue
+      if target.exists():
+        if target.is_dir():
+          logging.info('Target "%s" exists', target)
+          continue
+        raise SetuppyError('Target "%s" exist and is a file', target)
 
       changed = True
       cmd1 = f"curl -sSL {shlex.quote(source)}"

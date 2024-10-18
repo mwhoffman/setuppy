@@ -16,6 +16,7 @@ dependencies = [
 dev = [
   "basedpyright",
   "coverage[toml]",
+  "pyfakefs",
   "pytest",
   "pytest-cov",
 ]

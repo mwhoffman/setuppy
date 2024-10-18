@@ -22,6 +22,8 @@ packaging==24.1
     # via pytest
 pluggy==1.5.0
     # via pytest
+pyfakefs==5.7.1
+    # via setuppy (pyproject.toml)
 pytest==8.3.3
     # via
     #   pytest-cov
