@@ -15,7 +15,15 @@ from setuppy.types import SetuppyError
 
 @dataclasses.dataclass
 class Github(BaseCommand):
-  """Implementation of the github command."""
+  """Clone repositories from github into the destination directory.
+
+  This command takes a collection of `sources`, i.e. a list github repositories
+  of the form "user/repository" and will use `git` to clone those sources into
+  the destination directory `dest`.
+
+  The returned `CommandResult` will have `result.changed` set to `True` if a
+  change is made, i.e. if the target didn't already exist and was created.
+  """
   sources: list[str]
   dest: str
 
@@ -25,7 +33,7 @@ class Github(BaseCommand):
     facts: dict[str, Any],
     simulate: bool,
   ) -> CommandResult:
-    """Run a github action."""
+    """Run the github action."""
     dest = pathlib.Path(self.dest.format(**facts))
     changed = False
 
