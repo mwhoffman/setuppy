@@ -38,6 +38,8 @@ class Curl(BaseCommand):
   ) -> CommandResult:
     """Run the curl command."""
     dest = pathlib.Path(self.dest.format(**facts))
+
+    # We haven't made any changes yet.
     changed = False
 
     for s in self.sources:
@@ -45,25 +47,34 @@ class Curl(BaseCommand):
       target = dest / os.path.basename(source)
       suffix = "".join(target.suffixes)
 
-      if suffix == ".tar.xz":
-        taropt = "J"
-        target = target.with_suffix("").with_suffix("")
-      else:
-        raise SetuppyError('Unknown suffix "{suffix}"')
+      # Find the unsuffixed name and based on the suffix save the option to pass
+      # to tar to expand the tarball.
+      match suffix:
+        case ".tar.xz":
+          taropt = "J"
+          target = target.with_suffix("").with_suffix("")
+        case _:
+          # Or raise an exception if we don't know what to do.
+          raise SetuppyError('Unknown suffix "{suffix}"')
 
       if target.exists():
-        if target.is_dir():
-          logging.info('Target "%s" exists', target)
-          continue
-        raise SetuppyError('Target "%s" exist and is a file', target)
+        # Raise an error if the target exists and is a file.
+        if target.is_file():
+          raise SetuppyError('Target "%s" exist and is a file', target)
 
+        # Otherwise it's a directory so we'll skip it.
+        logging.info('Target "%s" exists', target)
+        continue
+
+      # Target doesn't exist so we'll create it.
       changed = True
       cmd1 = f"curl -sSL {shlex.quote(source)}"
       cmd2 = f"tar -x{taropt}f - -C {shlex.quote(str(target))}"
+      logging.info('Running command "%s | %s"', cmd1, cmd2)
 
-      if simulate:
-        logging.info('Skipping command "%s | %s"', cmd1, cmd2)
-      else:
+      # Ensure the target dir exists and run the command, but only if we're not
+      # simulating.
+      if not simulate:
         target.mkdir(parents=True, exist_ok=True)
         rc, _, _ = run_pipe(cmd1, cmd2)
         if rc != 0:

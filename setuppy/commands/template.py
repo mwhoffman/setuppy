@@ -61,18 +61,19 @@ class Template(BaseCommand):
 
           # Otherwise we'll just log and skip the target.
           logging.info('Target "%s" exists', target)
+          continue
 
           # TODO: Should we try and evaluate whether the file's contents would
           # be changed and only skip if they WOULDN'T be changed.
 
-        else:
-          # Target doesn't exist so we'll create it.
-          changed = True
-          logging.info('Creating "%s"', target)
+        # Target doesn't exist so we'll create it.
+        changed = True
+        logging.info('Creating "%s"', target)
 
-          # ... unless we're simulating. So don't actually make the change.
-          if not simulate:
-            target.parent.mkdir(parents=True)
-            target.write_text(file.read_text().format(**facts))
+        # Ensure the target's parent dirs exist and run the command, but only if
+        # we're not simulating.
+        if not simulate:
+          target.parent.mkdir(parents=True)
+          target.write_text(file.read_text().format(**facts))
 
     return CommandResult(changed=changed)
