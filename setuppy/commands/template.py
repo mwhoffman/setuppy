@@ -35,14 +35,12 @@ class Template(BaseCommand):
     """Run the template command."""
     source = pathlib.Path(self.source.format(**facts))
     dest = pathlib.Path(self.dest.format(**facts))
+    changed = False
 
-    # Raise an error if the source exists and is not a directory.
+    # Raise an exception if source exists and is not a directory.
     if not source.is_dir():
       msg = f'"{source.absolute()}" does not exist or is not a directory.'
       raise SetuppyError(msg)
-
-    # We haven't made any changes yet.
-    changed = False
 
     # NOTE: In order to support py3.11 we can't use source.walk() which was only
     # introduced in py3.12.
@@ -54,7 +52,7 @@ class Template(BaseCommand):
         target = dest / file.relative_to(source)
 
         if target.exists():
-          # Raise an error if the target exists and is not a file.
+          # Raise an exception if the target exists and is not a file.
           if target.is_dir():
             msg = f'"{target.absolute()}" exists and is not a file.'
             raise SetuppyError(msg)

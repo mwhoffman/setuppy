@@ -19,7 +19,7 @@ def test_curl(rp, fs):
   # raise an assertion error rather than having it fail within the command call.
   rp.return_value = (0, "", "")
 
-  # Running the command should raise an error.
+  # Running the invalid command should raise an error.
   rp.reset_mock()
   fs.reset()
   with pytest.raises(SetuppyError):

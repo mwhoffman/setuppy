@@ -38,8 +38,6 @@ class Curl(BaseCommand):
   ) -> CommandResult:
     """Run the curl command."""
     dest = pathlib.Path(self.dest.format(**facts))
-
-    # We haven't made any changes yet.
     changed = False
 
     for s in self.sources:
@@ -58,7 +56,7 @@ class Curl(BaseCommand):
           raise SetuppyError('Unknown suffix "{suffix}"')
 
       if target.exists():
-        # Raise an error if the target exists and is a file.
+        # Raise an exception if the target exists and is a file.
         if target.is_file():
           raise SetuppyError('Target "%s" exist and is a file', target)
 

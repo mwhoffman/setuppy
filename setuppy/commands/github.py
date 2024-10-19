@@ -40,42 +40,42 @@ class Github(BaseCommand):
     for s in self.sources:
       source = s.format(**facts)
       target = dest / os.path.basename(source)
+      gitdir = target / ".git"
       url = f"https://github.com/{source}"
 
       if target.exists():
-        if not target.is_dir():
-          msg = f'Target "{target}" exists and is not a directory.'
-          raise SetuppyError(msg)
-
-        gitdir = target / ".git"
-        if gitdir.exists() and not gitdir.is_dir():
+        # Raise an exception if the target is not a proper gitdir.
+        if not target.is_dir() or not gitdir.exists() or not gitdir.is_dir():
           msg = f'Target "{target}" exists and is not a git directory.'
           raise SetuppyError(msg)
 
+        # Run a git command to get the remote origin.
         cmd = f"git --git-dir={shlex.quote(str(gitdir))} remote get-url origin"
+        logging.info('Running command "%s"', cmd)
         rc, stderr, _ = run_command(cmd)
 
+        # Raise an exception if the command returns an error.
         if rc != 0:
-          msg = f'Error accessing git-dir "{gitdir}".'
+          msg = f'error accessing git-dir "{gitdir}".'
           raise SetuppyError(msg)
 
+        # Raise an exception if the origin is wrong.
         if stderr.strip() != url:
-          msg = (
-            f'Target "{target}" exists, but tracks a different upstream '
-            'repository.'
-          )
+          msg = f'target "{target}" exists, but tracks a different repository.'
           raise SetuppyError(msg)
 
-        # The target must be a git directory pointed at the correct repository.
+        # The target must be a git directory pointed at the correct repository
+        # so we'll skip this target.
         logging.info('Target "%s" exists', target)
         continue
 
+      # Otherwise we should run the git command to clone the repository.
       changed = True
       cmd = f"git clone {shlex.quote(url)} {shlex.quote(str(target))}"
+      logging.info('Running command "%s"', cmd)
 
-      if simulate:
-        logging.info('Skipping command "%s"', cmd)
-      else:
+      # Run the git command if we're not simulating.
+      if not simulate:
         rc, stderr, _ = run_command(cmd)
         if rc != 0:
           msg = f'Error cloning target "{target}".'
