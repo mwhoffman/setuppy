@@ -9,7 +9,7 @@ from setuppy.commands.template import Template
 from setuppy.types import SetuppyError
 
 
-def test_curl(fs: FakeFilesystem):
+def test_template(fs: FakeFilesystem):
   source = "/source"
   dest = "/dest"
   template = Template(source, dest)
