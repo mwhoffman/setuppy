@@ -35,6 +35,7 @@ class Apt(BaseCommand):
     """Run the command or do nothing if simulate is True."""
     # Try and get a cached list of packages.
     installed = facts.get("apt_packages")
+    changed = False
 
     # Get the installed packages if they're not cached.
     if installed is None:
@@ -43,26 +44,27 @@ class Apt(BaseCommand):
         raise SetuppyError("Error determining installed packages.")
       installed = stderr.strip().split()
 
+    # Find the packages that are not installed.
     packages = [p.format(**facts) for p in self.packages]
     packages = list(set(packages).difference(set(installed)))
 
+    # Add uninstalled packages in so that we can cache installed packages with
+    # our return value.
     installed.extend(packages)
     facts = {"apt_packages": installed}
 
-    # If packages is empty then nothing will change.
-    if not packages:
-      return CommandResult(changed=False, facts=facts)
+    if packages:
+      # If there are any uninstalled packages then we'll run a command to
+      # install them.
+      changed = True
+      packages = [shlex.quote(p) for p in packages]
+      cmd = f"apt-get -y install {' '.join(packages)}"
+      logging.info('Skipping command "%s"', cmd)
 
-    # Construct the command.
-    packages = [shlex.quote(p) for p in packages]
-    cmd = f"apt-get -y install {' '.join(packages)}"
+      if not simulate:
+        rc, _, _ = run_command(cmd, sudo=True)
+        if rc != 0:
+          msg = f'Error running command "{cmd}".'
+          raise SetuppyError(msg)
 
-    if simulate:
-      logging.info('Skipping command "sudo %s"', cmd)
-    else:
-      rc, _, _ = run_command(cmd, sudo=True)
-      if rc != 0:
-        msg = f'Error running command "{cmd}".'
-        raise SetuppyError(msg)
-
-    return CommandResult(changed=True, facts=facts)
+    return CommandResult(changed=changed, facts=facts)
