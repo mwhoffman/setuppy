@@ -1,5 +1,6 @@
 """Test for the github command."""
 
+from collections.abc import Iterable
 from unittest import mock
 
 import pytest
@@ -9,83 +10,127 @@ from setuppy.commands.github import Github
 from setuppy.types import SetuppyError
 
 
-@mock.patch("setuppy.commands.github.run_command")
-def test_github(rc: mock.MagicMock, fs: FakeFilesystem):
-  repo = "mwhoffman/setuppy"
-  dest = "/"
-  github = Github([repo], dest)
+REPO = "bar"
+SOURCE = f"foo/{REPO}"
+TARGET = f"/{REPO}"
+URL = f"https://github.com/{SOURCE}"
+CMD_GET_URL = f"git --git-dir=/{REPO}/.git remote get-url origin"
+CMD_CLONE = f"git clone {URL} {TARGET}"
 
-  cmd_get_url = "git --git-dir=/setuppy/.git remote get-url origin"
-  cmd_clone = f"git clone https://github.com/{repo} /setuppy"
 
-  # Make the run_command function return success so that if we do call it we can
-  # raise an assertion error rather than having it fail within the command call.
-  rc.return_value = (0, "", "")
+@pytest.fixture
+def run_command() -> Iterable[mock.MagicMock]:
+  patcher = mock.patch("setuppy.commands.github.run_command")
+  run_command = patcher.start()
+  run_command.return_value = (0, "", "")
+  yield run_command
+  patcher.stop()
 
-  # Raise an exception if target exists and is not a dir.
-  rc.reset_mock()
-  fs.reset()
-  fs.create_file("/setuppy")
+
+def test_exists_not_dir(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,
+):
+  # Raise an exception if TARGET exists and is not a dir.
+  fs.create_file(TARGET)
+  github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  assert not rc.called
+  assert not run_command.called
 
-  # Raise an exception if target/.git doesn't exist.
-  rc.reset_mock()
-  fs.reset()
-  fs.create_dir("/setuppy/")
+
+def test_exists_no_git(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,
+):
+  # Raise an exception if TARGET/.git doesn't exist.
+  fs.create_dir(TARGET)
+  github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  assert not rc.called
+  assert not run_command.called
 
-  # Raise an exception if target/.git exists and is not a dir.
-  rc.reset_mock()
-  fs.reset()
-  fs.create_file("/setuppy/.git")
+
+def test_exists_git_not_dir(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,
+):
+  # Raise an exception if TARGET/.git exists and is not a dir.
+  fs.create_file(f"{TARGET}/.git")
+  github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  assert not rc.called
+  assert not run_command.called
 
+
+def test_exists_get_url_fails(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,
+):
   # Raise an exception the get-url command fails.
-  rc.reset_mock()
-  rc.return_value = (1, "", "")
-  fs.reset()
-  fs.create_dir("/setuppy/.git")
+  fs.create_dir(f"{TARGET}/.git")
+  run_command.return_value = (1, "", "")
+  github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  rc.assert_called_once_with(cmd_get_url)
+  run_command.assert_called_once_with(CMD_GET_URL)
 
+
+def test_exists_wrong_repo(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,
+):
   # Raise an exception if the get-url command returns the wrong repo.
-  rc.reset_mock()
-  rc.return_value = (0, "https://foo.com", "")
+  fs.create_dir(f"{TARGET}/.git")
+  run_command.return_value = (0, "https://foo.com", "")
+  github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  rc.assert_called_once_with(cmd_get_url)
+  run_command.assert_called_once_with(CMD_GET_URL)
 
+
+def test_exists(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,
+):
   # Make sure we skip the command if the repo exists.
-  rc.reset_mock()
-  rc.return_value = (0, f"https://github.com/{repo}", "")
+  fs.create_dir(f"{TARGET}/.git")
+  run_command.return_value = (0, f"https://github.com/{SOURCE}", "")
+  github = Github(sources=[SOURCE], dest="/")
   rv = github(facts={}, simulate=False)
   assert not rv.changed
-  rc.assert_called_once_with(cmd_get_url)
+  run_command.assert_called_once_with(CMD_GET_URL)
 
+
+def test_command_runs(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,  # noqa: ARG001
+):
   # Make sure we run the command.
-  fs.reset()
-  rc.reset_mock()
-  rc.return_value = (0, "", "")
+  github = Github(sources=[SOURCE], dest="/")
   rv = github(facts={}, simulate=False)
   assert rv.changed
-  rc.assert_called_once_with(cmd_clone)
+  run_command.assert_called_once_with(CMD_CLONE)
 
+
+def test_command_simulate(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,  # noqa: ARG001
+):
   # Same as above, but don't call the command if we're simulating.
-  rc.reset_mock()
+  github = Github(sources=[SOURCE], dest="/")
   rv = github(facts={}, simulate=True)
   assert rv.changed
-  assert not rc.called
+  assert not run_command.called
 
+
+def test_command_fails(
+  run_command: mock.MagicMock,
+  fs: FakeFilesystem,  # noqa: ARG001
+):
   # Raise an exception if the command returns an error.
-  rc.reset_mock()
-  rc.return_value = (1, "", "")
+  run_command.return_value = (1, "", "")
+  github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  rc.assert_called_once_with(cmd_clone)
+  run_command.assert_called_once_with(CMD_CLONE)

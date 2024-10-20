@@ -42,3 +42,4 @@ branch = true
 
 [tool.pyright]
 typeCheckingMode = "standard"
+reportUnusedParameter = false
