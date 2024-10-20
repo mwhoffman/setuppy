@@ -33,7 +33,7 @@ class Command(BaseCommand):
     if not simulate:
       rc, _, _ = run_command(cmd)
       if rc != 0:
-        msg = f'Error running command "{' '.join(cmd)}".'
+        msg = f'Error running command "{" ".join(cmd)}".'
         raise SetuppyError(msg)
 
     return CommandResult(changed=True)
