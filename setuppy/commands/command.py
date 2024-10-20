@@ -15,8 +15,8 @@ class Command(BaseCommand):
   """Run a basic shell command.
 
   This command runs a basic shell command passed as a string. Because we don't
-  know anything else about the command this will always mark the command as
-  having caused a change.
+  know anything else about the command this will always return
+  `CommandResult.changed` set to True.
   """
   command: str
 
@@ -26,12 +26,11 @@ class Command(BaseCommand):
     facts: dict[str, Any],
     simulate: bool,
   ) -> CommandResult:
-    """Run the command or do nothing if simulate is True."""
+    """Run a raw command."""
     cmd = self.command.format(**facts)
+    logging.info('Running command "%s"', cmd)
 
-    if simulate:
-      logging.info('Skipping command "%s"', cmd)
-    else:
+    if not simulate:
       # NOTE: this does not use shlex.quote because it may contain a command
       # with multiple terms.
       rc, _, _ = run_command(cmd)
