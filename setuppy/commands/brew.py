@@ -36,6 +36,7 @@ class Brew(BaseCommand):
     """Run a brew action."""
     # Try and get a cached list of packages.
     installed = facts.get("brew_packages")
+    changed = False
 
     # Get the installed packages if they're not cached.
     if installed is None:
@@ -51,26 +52,28 @@ class Brew(BaseCommand):
         raise SetuppyError("Error determining installed packages.")
       installed.extend(stderr.strip().split())
 
+    # Find the packages that are not installed.
     packages = [p.format(**facts) for p in self.packages]
     packages = list(set(packages).difference(set(installed)))
 
+    # Add uninstalled packages in so that we can cache installed packages with
+    # our return value.
     installed.extend(packages)
     facts = {"brew_packages": installed}
 
-    # If packages is empty then nothing will change.
-    if not packages:
-      return CommandResult(changed=False, facts=facts)
-
-    # Construct the command.
-    packages = [shlex.quote(p) for p in packages]
-    cmd = f"brew install {' '.join(packages)}"
-
-    if simulate:
+    if packages:
+      # If there are any uninstalled packages then we'll run a command to
+      # install them.
+      changed = True
+      packages = [shlex.quote(p) for p in packages]
+      cmd = f"brew install {' '.join(packages)}"
       logging.info('Skipping command "%s"', cmd)
-    else:
-      rc, _, _ = run_command(cmd)
-      if rc != 0:
-        msg = f'Error running command "{cmd}".'
-        raise SetuppyError(msg)
 
-    return CommandResult(changed=True, facts=facts)
+      # Run the command if we're not simulating.
+      if not simulate:
+        rc, _, _ = run_command(cmd)
+        if rc != 0:
+          msg = f'Error running command "{cmd}".'
+          raise SetuppyError(msg)
+
+    return CommandResult(changed=changed, facts=facts)

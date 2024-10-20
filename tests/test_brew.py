@@ -1,6 +1,7 @@
 """Test for the brew command."""
 
-from unittest.mock import patch
+from collections.abc import Iterable
+from unittest import mock
 
 import pytest
 
@@ -8,53 +9,81 @@ from setuppy.commands.brew import Brew
 from setuppy.types import SetuppyError
 
 
-@patch("setuppy.commands.brew.run_command")
-def test_brew(rc):
-  brew = Brew(["foo", "bar", "baz"])
+PACKAGES = ["foo", "bar", "baz"]
 
+
+@pytest.fixture
+def run_command() -> Iterable[mock.MagicMock]:
+  patcher = mock.patch("setuppy.commands.brew.run_command")
+  run_command = patcher.start()
+  run_command.return_value = (0, "", "")
+  yield run_command
+  patcher.stop()
+
+
+def test_list_fails(run_command: mock.MagicMock):
   # Run brew list and raise an exception if there's an error.
-  rc.reset_mock()
-  rc.return_value = (1, "", "")
+  run_command.return_value = (1, "", "")
+  brew = Brew(PACKAGES)
   with pytest.raises(SetuppyError):
-    brew(facts={}, simulate=True)
+    brew(facts={}, simulate=False)
+  assert run_command.call_count == 1
+  run_command.assert_any_call(r"brew list --formula -1")
 
   # Same as above but fail on the brew list --casks call.
-  rc.reset_mock()
-  rc.side_effect = [(0, "", ""), (1, "", "")]
+  run_command.reset_mock()
+  run_command.side_effect = [(0, "", ""), (1, "", "")]
+  brew = Brew(PACKAGES)
   with pytest.raises(SetuppyError):
-    brew(facts={}, simulate=True)
+    brew(facts={}, simulate=False)
+  assert run_command.call_count == 2
+  run_command.assert_any_call(r"brew list --formula -1")
+  run_command.assert_any_call(r"brew list --cask -1")
 
-  # Run brew list to find installed packages for which we'll return all of them.
-  # The command should return not changed and we should only brew list twice.
-  # Technically we're mocking that the given packages are both formulae and
-  # casks, but treating this as a set will ignore this.
-  rc.reset_mock(side_effect=True)
-  rc.return_value = (0, "foo\nbar\nbaz", "")
+
+def test_all_installed(run_command: mock.MagicMock):
+  # If all the packages are installed then we should set rv.changed=False and
+  # should skip the brew install command.
+  run_command.return_value = (0, "\n".join(PACKAGES), "")
+  brew = Brew(PACKAGES)
   rv = brew(facts={}, simulate=False)
   assert not rv.changed
-  rc.assert_any_call(r"brew list --formula -1")
-  rc.assert_any_call(r"brew list --cask -1")
+  assert run_command.call_count == 2
+  run_command.assert_any_call(r"brew list --formula -1")
+  run_command.assert_any_call(r"brew list --cask -1")
 
-  # Skip brew list because we have "cached" brew_packages; the baz package is
-  # missing so this results in a change, but we don't call brew install because
-  # simulate is True.
-  rc.reset_mock()
-  rc.return_value = (0, "", "")
-  rv = brew(facts={"brew_packages": ["foo", "bar"]}, simulate=True)
+
+def test_all_installed_cached(run_command: mock.MagicMock):
+  # Same as above but we'll get the information from the cache and shouldn't
+  # call run_command at all.
+  brew = Brew(PACKAGES)
+  rv = brew(facts={"brew_packages": PACKAGES}, simulate=False)
+  assert not rv.changed
+  assert not run_command.called
+
+
+def test_install(run_command: mock.MagicMock):
+  # Use the cache so we skip querying installed packages. We leave one package
+  # out so we should try and install it.
+  brew = Brew(PACKAGES)
+  rv = brew(facts={"brew_packages": PACKAGES[:-1]}, simulate=False)
   assert rv.changed
-  assert not rc.called
+  run_command.assert_called_once_with(f"brew install {PACKAGES[-1]}")
 
-  # Skip brew list because we have "cached" brew_packages; try to install baz,
-  # but raise an error if the brew install command fails.
-  rc.reset_mock()
-  rc.return_value = (1, "", "")
+
+def test_install_error(run_command: mock.MagicMock):
+  # Same as above but the installation command errors so we should raise an
+  # exception.
+  run_command.return_value = (1, "", "")
+  brew = Brew(PACKAGES)
   with pytest.raises(SetuppyError):
-    brew(facts={"brew_packages": ["foo", "bar"]}, simulate=False)
+    brew(facts={"brew_packages": PACKAGES[:-1]}, simulate=False)
+  run_command.assert_called_once_with(f"brew install {PACKAGES[-1]}")
 
-  # Skip brew list because we have "cached" brew_packages; try to install baz
-  # and make sure we properly call brew install.
-  rc.reset_mock()
-  rc.return_value = (0, "", "")
-  rv = brew(facts={"brew_packages": ["foo", "bar"]}, simulate=False)
+
+def test_install_simulate(run_command: mock.MagicMock):
+  # Same as above but simulate, so we shouldn't run the command.
+  brew = Brew(PACKAGES)
+  rv = brew(facts={"brew_packages": PACKAGES[:-1]}, simulate=True)
   assert rv.changed
-  rc.assert_called_once_with("brew install baz")
+  assert not run_command.called
