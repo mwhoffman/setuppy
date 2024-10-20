@@ -2,7 +2,6 @@
 
 import dataclasses
 import logging
-import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -41,13 +40,13 @@ class Brew(BaseCommand):
     # Get the installed packages if they're not cached.
     if installed is None:
       # Find formula.
-      rc, stderr, _ = run_command(r"brew list --formula -1")
+      rc, stderr, _ = run_command(["brew", "list", "--formula", "-1"])
       if rc != 0:
         raise SetuppyError("Error determining installed packages.")
       installed = stderr.strip().split()
 
       # Find casks.
-      rc, stderr, _ = run_command(r"brew list --cask -1")
+      rc, stderr, _ = run_command(["brew", "list", "--cask", "-1"])
       if rc != 0:
         raise SetuppyError("Error determining installed packages.")
       installed.extend(stderr.strip().split())
@@ -65,15 +64,14 @@ class Brew(BaseCommand):
       # If there are any uninstalled packages then we'll run a command to
       # install them.
       changed = True
-      packages = [shlex.quote(p) for p in packages]
-      cmd = f"brew install {' '.join(packages)}"
+      cmd = ["brew", "install", *packages]
       logging.info('Skipping command "%s"', cmd)
 
       # Run the command if we're not simulating.
       if not simulate:
         rc, _, _ = run_command(cmd)
         if rc != 0:
-          msg = f'Error running command "{cmd}".'
+          msg = f'Error running command "{' '.join(cmd)}".'
           raise SetuppyError(msg)
 
     return CommandResult(changed=changed, facts=facts)

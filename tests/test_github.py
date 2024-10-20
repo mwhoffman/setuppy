@@ -14,8 +14,8 @@ REPO = "bar"
 SOURCE = f"foo/{REPO}"
 TARGET = f"/{REPO}"
 URL = f"https://github.com/{SOURCE}"
-CMD_GET_URL = f"git --git-dir=/{REPO}/.git remote get-url origin"
-CMD_CLONE = f"git clone {URL} {TARGET}"
+CMD_QUERY = ["git", "--git-dir", f"/{REPO}/.git", "remote", "get-url", "origin"]
+CMD_CLONE = ["git", "clone", URL, TARGET]
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def test_exists_get_url_fails(
   github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  run_command.assert_called_once_with(CMD_GET_URL)
+  run_command.assert_called_once_with(CMD_QUERY)
 
 
 def test_exists_wrong_repo(
@@ -86,7 +86,7 @@ def test_exists_wrong_repo(
   github = Github(sources=[SOURCE], dest="/")
   with pytest.raises(SetuppyError):
     github(facts={}, simulate=False)
-  run_command.assert_called_once_with(CMD_GET_URL)
+  run_command.assert_called_once_with(CMD_QUERY)
 
 
 def test_exists(
@@ -99,7 +99,7 @@ def test_exists(
   github = Github(sources=[SOURCE], dest="/")
   rv = github(facts={}, simulate=False)
   assert not rv.changed
-  run_command.assert_called_once_with(CMD_GET_URL)
+  run_command.assert_called_once_with(CMD_QUERY)
 
 
 def test_command_runs(

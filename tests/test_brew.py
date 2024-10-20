@@ -10,6 +10,9 @@ from setuppy.types import SetuppyError
 
 
 PACKAGES = ["foo", "bar", "baz"]
+CMD_QUERY_FORMULA = ["brew", "list", "--formula", "-1"]
+CMD_QUERY_CASK = ["brew", "list", "--cask", "-1"]
+CMD_INSTALL = ["brew", "install"]
 
 
 @pytest.fixture
@@ -28,7 +31,7 @@ def test_list_fails(run_command: mock.MagicMock):
   with pytest.raises(SetuppyError):
     brew(facts={}, simulate=False)
   assert run_command.call_count == 1
-  run_command.assert_any_call(r"brew list --formula -1")
+  run_command.assert_any_call(CMD_QUERY_FORMULA)
 
   # Same as above but fail on the brew list --casks call.
   run_command.reset_mock()
@@ -37,8 +40,8 @@ def test_list_fails(run_command: mock.MagicMock):
   with pytest.raises(SetuppyError):
     brew(facts={}, simulate=False)
   assert run_command.call_count == 2
-  run_command.assert_any_call(r"brew list --formula -1")
-  run_command.assert_any_call(r"brew list --cask -1")
+  run_command.assert_any_call(CMD_QUERY_FORMULA)
+  run_command.assert_any_call(CMD_QUERY_CASK)
 
 
 def test_all_installed(run_command: mock.MagicMock):
@@ -49,8 +52,8 @@ def test_all_installed(run_command: mock.MagicMock):
   rv = brew(facts={}, simulate=False)
   assert not rv.changed
   assert run_command.call_count == 2
-  run_command.assert_any_call(r"brew list --formula -1")
-  run_command.assert_any_call(r"brew list --cask -1")
+  run_command.assert_any_call(CMD_QUERY_FORMULA)
+  run_command.assert_any_call(CMD_QUERY_CASK)
 
 
 def test_all_installed_cached(run_command: mock.MagicMock):
@@ -68,7 +71,7 @@ def test_install(run_command: mock.MagicMock):
   brew = Brew(PACKAGES)
   rv = brew(facts={"brew_packages": PACKAGES[:-1]}, simulate=False)
   assert rv.changed
-  run_command.assert_called_once_with(f"brew install {PACKAGES[-1]}")
+  run_command.assert_called_once_with([*CMD_INSTALL, PACKAGES[-1]])
 
 
 def test_install_error(run_command: mock.MagicMock):
@@ -78,7 +81,7 @@ def test_install_error(run_command: mock.MagicMock):
   brew = Brew(PACKAGES)
   with pytest.raises(SetuppyError):
     brew(facts={"brew_packages": PACKAGES[:-1]}, simulate=False)
-  run_command.assert_called_once_with(f"brew install {PACKAGES[-1]}")
+  run_command.assert_called_once_with([*CMD_INSTALL, PACKAGES[-1]])
 
 
 def test_install_simulate(run_command: mock.MagicMock):

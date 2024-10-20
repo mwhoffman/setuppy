@@ -4,12 +4,13 @@ import logging
 import shlex
 import shutil
 import subprocess
+from collections.abc import Iterable
 
 from setuppy.types import SetuppyError
 
 
 def run_command(
-  cmd: str,
+  cmd: Iterable[str],
   *,
   sudo: bool = False,
 ) -> tuple[int, str, str]:
@@ -23,25 +24,27 @@ def run_command(
     A tuple (rc, stdout, stderr) containing the return code of the command and
     stdout and stderr as strings.
   """
-  args = shlex.split(cmd)
-  path = shutil.which(args[0])
+  cmd = list(cmd)
+  fullpath = shutil.which(cmd[0])
 
-  if path is None:
-    raise SetuppyError(f"Could not find command: {args[0]}")
+  if fullpath is None:
+    raise SetuppyError(f"Could not find command: {cmd[0]}")
 
-  args[0] = path
+  cmd[0] = fullpath
 
   if sudo:
-    args = ["/usr/bin/sudo", *args]
+    cmd = ["/usr/bin/sudo", *cmd]
 
-  logging.info('Running command "%s"', " ".join(args))
   proc = subprocess.run(
-    args, capture_output=True, encoding="utf-8", check=False
+    cmd, capture_output=True, encoding="utf-8", check=False
   )
   return proc.returncode, proc.stdout, proc.stderr
 
 
-def run_pipe(cmd1: str, cmd2: str) -> tuple[int, str, str]:
+def run_pipe(
+  cmd1: Iterable[str],
+  cmd2: Iterable[str],
+) -> tuple[int, str, str]:
   """Run the given command.
 
   Args:
@@ -52,23 +55,23 @@ def run_pipe(cmd1: str, cmd2: str) -> tuple[int, str, str]:
     A tuple (rc, stdout, stderr) containing the return code of the command and
     stdout and stderr as strings.
   """
-  args1 = shlex.split(cmd1)
-  path1 = shutil.which(args1[0])
-  if path1 is None:
-    raise SetuppyError(f"Could not find command: {args1[0]}")
-  args1[0] = path1
+  cmd1 = list(cmd1)
+  fullpath1 = shutil.which(cmd1[0])
+  if fullpath1 is None:
+    raise SetuppyError(f"Could not find command: {cmd1[0]}")
+  cmd1[0] = fullpath1
 
-  args2 = shlex.split(cmd2)
-  path2 = shutil.which(args2[0])
-  if path2 is None:
-    raise SetuppyError(f"Could not find command: {args2[0]}")
-  args2[0] = path2
+  cmd2 = list(cmd2)
+  fullpath2 = shutil.which(cmd2[0])
+  if fullpath2 is None:
+    raise SetuppyError(f"Could not find command: {cmd2[0]}")
+  cmd2[0] = fullpath2
 
-  logging.info('Running command "%s | %s"', " ".join(args1), " ".join(args2))
+  logging.info('Running command "%s | %s"', " ".join(cmd1), " ".join(cmd2))
 
-  proc1 = subprocess.Popen(args1, stdout=subprocess.PIPE)
+  proc1 = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
   proc2 = subprocess.Popen(
-    args2, stdin=proc1.stdout, stdout=subprocess.PIPE, encoding="utf-8"
+    cmd2, stdin=proc1.stdout, stdout=subprocess.PIPE, encoding="utf-8"
   )
   stdout, stderr = proc2.communicate()
   return proc2.returncode, stdout, stderr

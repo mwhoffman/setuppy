@@ -18,7 +18,7 @@ class Command(BaseCommand):
   know anything else about the command this will always return
   `CommandResult.changed` set to True.
   """
-  command: str
+  command: list[str]
 
   def __call__(
     self,
@@ -27,15 +27,13 @@ class Command(BaseCommand):
     simulate: bool,
   ) -> CommandResult:
     """Run a raw command."""
-    cmd = self.command.format(**facts)
-    logging.info('Running command "%s"', cmd)
+    cmd = [c.format(**facts) for c in self.command]
+    logging.info('Running command "%s"', " ".join(cmd))
 
     if not simulate:
-      # NOTE: this does not use shlex.quote because it may contain a command
-      # with multiple terms.
       rc, _, _ = run_command(cmd)
       if rc != 0:
-        msg = f'Error running command "{cmd}".'
+        msg = f'Error running command "{' '.join(cmd)}".'
         raise SetuppyError(msg)
 
     return CommandResult(changed=True)

@@ -2,7 +2,6 @@
 
 import dataclasses
 import logging
-import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -39,7 +38,8 @@ class Apt(BaseCommand):
 
     # Get the installed packages if they're not cached.
     if installed is None:
-      rc, stderr, _ = run_command(r"dpkg-query -f '${binary:Package}\n' -W")
+      cmd = ["dpkg-query", "-f", r"${binary:Package}\n", "-W"]
+      rc, stderr, _ = run_command(cmd)
       if rc != 0:
         raise SetuppyError("Error determining installed packages.")
       installed = stderr.strip().split()
@@ -57,9 +57,8 @@ class Apt(BaseCommand):
       # If there are any uninstalled packages then we'll run a command to
       # install them.
       changed = True
-      packages = [shlex.quote(p) for p in packages]
-      cmd = f"apt-get -y install {' '.join(packages)}"
-      logging.info('Skipping command "%s"', cmd)
+      cmd = ["apt-get", "-y", "install", *packages]
+      logging.info('Running command "%s"', " ".join(cmd))
 
       if not simulate:
         rc, _, _ = run_command(cmd, sudo=True)

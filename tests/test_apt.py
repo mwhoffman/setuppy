@@ -10,7 +10,8 @@ from setuppy.types import SetuppyError
 
 
 PACKAGES = ["foo", "bar", "baz"]
-
+CMD_QUERY = ["dpkg-query", "-f", r"${binary:Package}\n", "-W"]
+CMD_INSTALL = ["apt-get", "-y", "install"]
 
 @pytest.fixture
 def run_command() -> Iterable[mock.MagicMock]:
@@ -27,7 +28,7 @@ def test_dpkg_fails(run_command: mock.MagicMock):
   apt = Apt(PACKAGES)
   with pytest.raises(SetuppyError):
     apt(facts={}, simulate=False)
-  run_command.assert_called_once_with(r"dpkg-query -f '${binary:Package}\n' -W")
+  run_command.assert_called_once_with(CMD_QUERY)
 
 
 def test_all_installed(run_command: mock.MagicMock):
@@ -37,7 +38,7 @@ def test_all_installed(run_command: mock.MagicMock):
   apt = Apt(PACKAGES)
   rv = apt(facts={}, simulate=False)
   assert not rv.changed
-  run_command.assert_called_once_with(r"dpkg-query -f '${binary:Package}\n' -W")
+  run_command.assert_called_once_with(CMD_QUERY)
 
 
 def test_all_installed_cached(run_command: mock.MagicMock):
@@ -55,8 +56,7 @@ def test_install(run_command: mock.MagicMock):
   apt = Apt(PACKAGES)
   rv = apt(facts={"apt_packages": PACKAGES[:-1]}, simulate=False)
   assert rv.changed
-  cmd = f"apt-get -y install {PACKAGES[-1]}"
-  run_command.assert_called_once_with(cmd, sudo=True)
+  run_command.assert_called_once_with([*CMD_INSTALL, PACKAGES[-1]], sudo=True)
 
 
 def test_install_error(run_command: mock.MagicMock):
@@ -66,8 +66,7 @@ def test_install_error(run_command: mock.MagicMock):
   apt = Apt(PACKAGES)
   with pytest.raises(SetuppyError):
     apt(facts={"apt_packages": PACKAGES[:-1]}, simulate=False)
-  cmd = f"apt-get -y install {PACKAGES[-1]}"
-  run_command.assert_called_once_with(cmd, sudo=True)
+  run_command.assert_called_once_with([*CMD_INSTALL, PACKAGES[-1]], sudo=True)
 
 
 def test_install_simulate(run_command: mock.MagicMock):

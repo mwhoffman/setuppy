@@ -50,8 +50,8 @@ class Github(BaseCommand):
           raise SetuppyError(msg)
 
         # Run a git command to get the remote origin.
-        cmd = f"git --git-dir={shlex.quote(str(gitdir))} remote get-url origin"
-        logging.info('Running command "%s"', cmd)
+        cmd = ["git", "--git-dir", str(gitdir), "remote", "get-url", "origin"]
+        logging.info('Running command "%s"', " ".join(cmd))
         rc, stderr, _ = run_command(cmd)
 
         # Raise an exception if the command returns an error.
@@ -71,8 +71,8 @@ class Github(BaseCommand):
 
       # Otherwise we should run the git command to clone the repository.
       changed = True
-      cmd = f"git clone {shlex.quote(url)} {shlex.quote(str(target))}"
-      logging.info('Running command "%s"', cmd)
+      cmd = ["git", "clone", url, str(target)]
+      logging.info('Running command "%s"', " ".join(cmd))
 
       # Run the git command if we're not simulating.
       if not simulate:

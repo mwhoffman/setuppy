@@ -66,8 +66,8 @@ def test_command(
   curl = Curl([URL], dest=DEST)
   rv = curl(facts={}, simulate=False)
   assert rv.changed
-  cmd1 = f"curl -sSL {URL}"
-  cmd2 = f"tar -xJf - -C {TARGET}"
+  cmd1 = ["curl", "-sSL", URL]
+  cmd2 = ["tar", "-xJf", "-", "-C", TARGET]
   run_pipe.assert_called_once_with(cmd1, cmd2)
 
 

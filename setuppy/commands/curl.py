@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import os
 import pathlib
-import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -66,9 +65,9 @@ class Curl(BaseCommand):
 
       # Target doesn't exist so we'll create it.
       changed = True
-      cmd1 = f"curl -sSL {shlex.quote(source)}"
-      cmd2 = f"tar -x{taropt}f - -C {shlex.quote(str(target))}"
-      logging.info('Running command "%s | %s"', cmd1, cmd2)
+      cmd1 = ["curl", "-sSL", source]
+      cmd2 = ["tar", f"-x{taropt}f", "-", "-C", str(target)]
+      logging.info('Running command "%s | %s"', " ".join(cmd1), " ".join(cmd2))
 
       # Ensure the target dir exists and run the command, but only if we're not
       # simulating.

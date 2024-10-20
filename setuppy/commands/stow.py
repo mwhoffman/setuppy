@@ -9,7 +9,6 @@ import dataclasses
 import logging
 import pathlib
 import re
-import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
@@ -69,13 +68,11 @@ class Stow(BaseCommand):
       raise SetuppyError(msg)
 
     # Format the command itself.
-    cmd = (
-      f"stow -v --no-folding "
-      f"-d {shlex.quote(str(stowdir))} "
-      f"-t {shlex.quote(str(targetdir))} "
-      f"-R {shlex.quote(package)}"
-    )
-    cmd += " -n" if simulate else ""
+    cmd = ["stow", "-v", "--no-folding"]
+    cmd += ["-d", str(stowdir)]
+    cmd += ["-t", str(targetdir)]
+    cmd += ["-R", str(package)]
+    cmd += ["-n"] if simulate else []
 
     # Run the command. If rc is nonzero there should be conflicts which we can
     # identify and mark as a failure.
@@ -113,7 +110,7 @@ class Stow(BaseCommand):
 
 def _get_stow_version() -> str:
   """Get the version of stow."""
-  rc, stdout, _ = run_command("stow --version")
+  rc, stdout, _ = run_command(["stow", "--version"])
   if rc != 0:
     raise SetuppyError("could not get stow version.")
 
