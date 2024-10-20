@@ -59,12 +59,13 @@ class Stow(BaseCommand):
     stowdir = pathlib.Path(self.stowdir.format(**facts))
     targetdir = pathlib.Path(self.targetdir.format(**facts))
 
-    if not stowdir.exists():
-      msg = f'stowdir "{stowdir}" does not exist.'
+    if not stowdir.is_dir():
+      msg = f'stowdir "{stowdir}" does not exist or is not a directory.'
       raise SetuppyError(msg)
 
-    if not (stowdir / package).exists():
-      msg = f'package directory "{stowdir/package}" does not exist.'
+    if not (stowdir / package).is_dir():
+      msg = f'package directory "{stowdir/package}" does not exist '
+      msg += "or is not a directory."
       raise SetuppyError(msg)
 
     # Format the command itself.
@@ -80,15 +81,7 @@ class Stow(BaseCommand):
     if rc != 0:
       conflicts = _get_conflicts_from_stderr(stderr, version)
       conflicts = [f'"{targetdir/conflict}"' for conflict in conflicts]
-      msg = f"target file{'s' if len(conflicts) > 1 else ''} "
-      match len(conflicts):
-        case 1:
-          msg += conflicts[0]
-        case 2:
-          msg += " and ".join(conflicts)
-        case _:
-          msg += ", ".join(conflicts[:-1]) + ", and " + conflicts[-1]
-      msg += f" already exist{'s' if len(conflicts) == 1 else ''}."
+      msg = f"target files already exist: {', '.join(conflicts)}"
       raise SetuppyError(msg)
 
     # Otherwise we can find the links that were either removed or added.
