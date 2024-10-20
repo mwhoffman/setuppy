@@ -1,7 +1,6 @@
 """Utility functions for running commands."""
 
 import logging
-import shlex
 import shutil
 import subprocess
 from collections.abc import Iterable
@@ -35,9 +34,7 @@ def run_command(
   if sudo:
     cmd = ["/usr/bin/sudo", *cmd]
 
-  proc = subprocess.run(
-    cmd, capture_output=True, encoding="utf-8", check=False
-  )
+  proc = subprocess.run(cmd, capture_output=True, encoding="utf-8", check=False)
   return proc.returncode, proc.stdout, proc.stderr
 
 
