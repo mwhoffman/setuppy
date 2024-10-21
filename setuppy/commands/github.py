@@ -4,7 +4,6 @@ import dataclasses
 import logging
 import os
 import pathlib
-import shlex
 from typing import Any
 
 from setuppy.commands.base import BaseCommand
