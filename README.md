@@ -6,5 +6,5 @@
 [tests]: https://github.com/mwhoffman/setuppy/actions/workflows/tests.yml
 [coverage]: https://coveralls.io/github/mwhoffman/setuppy?branch=main
 
-A craft, home-brewed, single-host orchestration system. Like ansible, but with
-half the features (and faster).
+A craft, home-brewed, single-host orchestration system. Like ansible, but with a
+tiny fraction of the features (and faster).
