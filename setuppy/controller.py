@@ -226,4 +226,7 @@ def _get_facts() -> tuple[dict[str, Any], list[str]]:
       facts["fontdir"] = f"{home}/Library/Fonts"
       system_tags += ["macos"]
 
+    case _:
+      raise SetuppyError("unknown uname value")
+
   return facts, system_tags
