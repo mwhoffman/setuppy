@@ -55,11 +55,12 @@ def test_target_exists(fs: FakeFilesystem):
 def test_template(fs: FakeFilesystem):
   # Make sure we create the file, do the templating using format, and that we
   # can create intermediate directories.
-  fs.create_file(SOURCE + "/foo/bar", contents="{foo}")
+  fs.create_file(SOURCE + "/foo/bar/baz", contents="{foo}")
+  fs.create_dir(DEST + "/foo/bar")
   template = Template(SOURCE, DEST)
   rv = template(facts={"foo": "bar"}, simulate=False)
   assert rv.changed
-  assert pathlib.Path(DEST + "/foo/bar").read_text() == "bar"
+  assert pathlib.Path(DEST + "/foo/bar/baz").read_text() == "bar"
 
 
 def test_simulate(fs: FakeFilesystem):

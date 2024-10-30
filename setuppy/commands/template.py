@@ -71,7 +71,7 @@ class Template(BaseCommand):
         # Ensure the target's parent dirs exist and run the command, but only if
         # we're not simulating.
         if not simulate:
-          target.parent.mkdir(parents=True)
+          target.parent.mkdir(parents=True, exist_ok=True)
           target.write_text(file.read_text().format(**facts))
 
     return CommandResult(changed=changed)
